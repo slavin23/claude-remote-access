@@ -256,17 +256,18 @@ footer{
 
 /* ---- blocker panel ---- */
 .blocker{
-  margin:38px 0 0;border:1px solid var(--alert);border-radius:8px;
+  margin:38px 0 0;border:1px solid var(--accent);border-radius:8px;
   background:var(--surface);box-shadow:var(--shadow);overflow:hidden;
 }
 .blocker-hd{
-  background:var(--alert-soft);border-bottom:1px solid var(--alert);
+  background:var(--accent-soft);border-bottom:1px solid var(--accent);
   padding:18px 24px;
 }
 .blocker-hd .kicker{
   font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:700;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--alert);margin:0 0 8px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 8px;
 }
+.nopoe .ok{color:var(--disp);font-weight:600}
 .blocker-hd h2{margin:0;font-size:clamp(1.25rem,3vw,1.6rem)}
 .blocker-bd{padding:22px 24px}
 .blocker-bd p{margin-bottom:14px}
@@ -300,34 +301,35 @@ footer{
 
   <div class="blocker">
     <div class="blocker-hd">
-      <p class="kicker">Blocker · read before install day</p>
-      <h2>The order as placed will not power on</h2>
+      <p class="kicker">Power · resolved</p>
+      <h2>The 210 W adapter is ordered</h2>
     </div>
     <div class="blocker-bd">
-      <p><strong>The Flex 2.5G PoE is the only PoE source in the entire order, and nothing
-      in the order can power it.</strong></p>
+      <p>That was the blocker. <strong>The Flex 2.5G PoE is the only PoE source on this
+      site</strong>, and nothing else in the order can power it.</p>
 
       <ul class="nopoe">
         <li><b>Dream Machine Pro</b><span>no PoE output</span></li>
         <li><b>Switch 24 (USW-24) × 2</b><span>no PoE output — 24 × 1 GbE + 2 × 1G SFP uplink</span></li>
         <li><b>Power Distribution Pro</b><span>rack PDU — 16 switched AC outlets. No PoE, and not a UPS</span></li>
-        <li><b>Flex 2.5G PoE</b><span>AC power adapter sold separately</span></li>
+        <li><b>Flex 2.5G PoE</b><span class="ok">AC adapter ordered — full 196 W budget unlocked</span></li>
       </ul>
 
-      <p>Out of the box the Flex is designed to be powered over its uplink. There is no PoE
-      source in this order to do that — and even if there were, a PoE+ input caps the whole
-      switch budget at 16 W, which is not enough for a single access point.</p>
+      <p>Keep the adapter with the switch. If it ever gets swapped for a PoE feed the
+      budget drops to 76 W at best and two access points go dark — and the symptom will
+      look like flaky APs, not a power problem.</p>
 
-      <h3 style="margin-top:26px">Order before install day</h3>
+      <h3 style="margin-top:26px">Still open</h3>
       <div class="scroll"><table>
         <thead><tr><th>Item</th><th>Approx.</th><th>Why</th></tr></thead>
         <tbody>
-          <tr class="t-sys"><td>AC Adapter 210 W</td><td class="mono">$79</td><td><strong>Mandatory.</strong> Unlocks the Flex's 196 W PoE budget. Without it nothing gets powered</td></tr>
           <tr class="t-open"><td>10G SFP+ DAC</td><td class="mono">~$15–30</td><td>Flex → UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE</td></tr>
           <tr class="t-open"><td>Rack UPS</td><td class="mono">varies</td><td>The PDU is remote-reboot, not battery. A blip drops both tenants' POS mid-transaction</td></tr>
           <tr class="t-open"><td>3.5" HDD</td><td class="mono">optional</td><td>Only if UniFi Protect gets added to the UDM Pro later</td></tr>
         </tbody>
       </table></div>
+      <p style="margin-bottom:0">Neither remaining item blocks the install — they are both
+      things you would rather have on the truck than order afterward.</p>
     </div>
   </div>
 </header>
@@ -360,7 +362,7 @@ Total                     <b>125 W</b></pre>
     <div class="scroll"><table>
       <thead><tr><th>Flex power input</th><th>Budget</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr class="t-sys"><td>210 W AC adapter</td><td class="mono">196 W</td><td><span class="tag allow">Works</span> 71 W headroom</td></tr>
+        <tr class="t-sys"><td>210 W AC adapter</td><td class="mono">196 W</td><td><span class="tag allow">Ordered</span> 71 W headroom</td></tr>
         <tr class="t-open"><td>PoE+++ on uplink</td><td class="mono">76 W</td><td><span class="tag block">Fails</span> 3 APs, nothing else</td></tr>
         <tr class="t-open"><td>PoE++ on uplink</td><td class="mono">46 W</td><td><span class="tag block">Fails</span></td></tr>
         <tr class="t-open"><td>PoE+ on uplink</td><td class="mono">16 W</td><td><span class="tag block">Fails</span> not even one AP</td></tr>
@@ -714,7 +716,7 @@ Total                     <b>125 W</b></pre>
 
     <h3>Before install day</h3>
     <ul class="check">
-      <li><input type="checkbox" id="a1"><span><label for="a1">Order the <b>210 W AC adapter</b> for the Flex — nothing powers on without it</label> <span class="ref">§00</span></span></li>
+      <li><input type="checkbox" id="a1" checked><span><label for="a1">Order the <b>210 W AC adapter</b> for the Flex</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a2"><span><label for="a2">Order a 10G SFP+ DAC for the Flex → UDM Pro uplink</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a3"><span><label for="a3">Order a rack UPS — the PDU is not one</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a4"><span><label for="a4">Confirm whether the dispensary's existing cameras are PoE</label> <span class="ref">§07</span></span></li>
@@ -745,7 +747,7 @@ Total                     <b>125 W</b></pre>
 </section>
 
 <footer>
-  <span>Design doc · revision 3</span>
+  <span>Design doc · revision 4</span>
   <span>Built against the confirmed bill of materials</span>
   <span>Specs verified at techspecs.ui.com</span>
 </footer>

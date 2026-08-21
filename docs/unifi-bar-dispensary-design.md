@@ -7,29 +7,31 @@ VLANs behind them.
 
 ---
 
-## 0. Read this first — the order will not power on
+## 0. Power — resolved, and what is still open
 
-**The Flex 2.5G PoE is the only PoE source in the entire order, and nothing in the
-order can power it.**
+**The 210 W AC adapter is ordered.** That was the blocker: the Flex 2.5G PoE is the
+only PoE source on this site, and nothing else in the order can power it.
 
-- Dream Machine Pro — **no PoE output**
-- Switch 24 (USW-24) ×2 — **no PoE output**, 24× 1 GbE + 2× 1G SFP uplink
-- Power Distribution Pro (USP-PDU-Pro) — a rack PDU: 16 switched AC outlets, 4 USB-C,
+- Dream Machine Pro — no PoE output
+- Switch 24 (USW-24) x2 — **no PoE output**, 24x 1 GbE + 2x 1G SFP uplink
+- Power Distribution Pro (USP-PDU-Pro) — rack PDU: 16 switched AC outlets, 4 USB-C,
   4 RJ45 management ports. **No PoE output**, and **not a UPS**
-- Flex 2.5G PoE — **AC power adapter sold separately**
+- Flex 2.5G PoE — AC adapter **ordered**, unlocks the full 196 W budget
 
-Out of the box the Flex is designed to be powered over its uplink. There is no PoE
-source in this order to do that, and even if there were, a PoE+ input caps the
-switch's whole budget at 16 W — not enough for one access point.
+Keep the adapter with the switch. If it ever gets swapped for a PoE feed, the budget
+drops to 76 W at best and two access points go dark — and the symptom will look like
+flaky APs, not a power problem.
 
-### Order this before the install date
+### Still open
 
 | Item | Approx. | Why |
 |------|---------|-----|
-| **AC Adapter 210W** | **$79** | **Mandatory.** Unlocks the Flex's 196 W PoE budget. Without it, nothing gets powered |
-| 10G SFP+ DAC cable | ~$15–30 | Flex → UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE |
+| 10G SFP+ DAC cable | ~$15-30 | Flex to UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE |
 | Rack UPS | varies | The PDU is remote-reboot, not battery. A blip drops both tenants' POS mid-transaction |
 | 3.5" HDD | optional | Only if UniFi Protect gets added to the UDM Pro later |
+
+Neither remaining item blocks the install — they are both things you would rather have
+on the truck than order afterward.
 
 ---
 
@@ -61,7 +63,8 @@ Total                      125 W
 | PoE++ on uplink | 46 W | Fails |
 | PoE+ on uplink | 16 W | Fails — not even one AP |
 
-The adapter is not optional. Everything else in this document assumes it.
+The adapter is ordered, so the site runs on the 196 W row with 71 W of headroom.
+Everything else in this document assumes it stays that way.
 
 ### Port count — comfortable once powered
 
@@ -295,7 +298,7 @@ If a second circuit is at all affordable, **give the dispensary its own** and us
 ## 10. Build checklist
 
 **Before install day**
-- [ ] Order the **210 W AC adapter** for the Flex — nothing powers on without it (§0)
+- [x] ~~Order the **210 W AC adapter** for the Flex~~ — ordered (§0)
 - [ ] Order a 10G SFP+ DAC for the Flex → UDM Pro uplink (§0)
 - [ ] Order a rack UPS — the PDU is not one (§0)
 - [ ] Confirm whether the dispensary's existing cameras are PoE (§7)

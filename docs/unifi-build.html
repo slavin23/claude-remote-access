@@ -324,7 +324,6 @@ footer{
       <div class="scroll"><table>
         <thead><tr><th>Item</th><th>Approx.</th><th>Why</th></tr></thead>
         <tbody>
-          <tr class="t-open"><td>10G SFP+ DAC</td><td class="mono">~$15–30</td><td>Flex → UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE</td></tr>
           <tr class="t-open"><td>Rack UPS</td><td class="mono">varies</td><td>The PDU is remote-reboot, not battery. A blip drops both tenants' POS mid-transaction</td></tr>
           <tr class="t-open"><td>3.5" HDD</td><td class="mono">optional</td><td>Only if UniFi Protect gets added to the UDM Pro later</td></tr>
         </tbody>
@@ -377,7 +376,7 @@ Total                     <b>125 W</b></pre>
         <tr class="t-sys"><td>Flex 2.5G PoE (8)</td><td>5 APs + 5G Backup = 6</td><td class="mono">2</td></tr>
         <tr class="t-bar"><td>Switch 24 — bar</td><td>POS, KDS, printers, TVs, office</td><td class="mono">plenty</td></tr>
         <tr class="t-disp"><td>Switch 24 — dispensary</td><td>POS, ID scanners, office, NVR</td><td class="mono">plenty</td></tr>
-        <tr class="t-sys"><td>UDM Pro LAN</td><td>Flex on SFP+, 2 × Switch 24 on RJ45</td><td class="mono">6</td></tr>
+        <tr class="t-sys"><td>UDM Pro LAN</td><td>Flex + 2 × Switch 24, all on RJ45</td><td class="mono">5</td></tr>
       </tbody>
     </table></div>
 
@@ -391,12 +390,24 @@ Total                     <b>125 W</b></pre>
       for the dispensary specifically.</p>
     </div>
 
-    <h3>The 10G uplink on the APs will not be used</h3>
-    <p>The U7 Pro XG has a 10 GbE uplink; the Flex's access ports are 2.5 GbE, so the APs
-    link at 2.5G. <strong>Do not chase this</strong> — 2.5G per AP is far more than a bar
-    will ever generate. But say it to the client now rather than let them find it later:
-    the XG premium is not being realized on this switch. Cat6 is fine at these run
-    lengths; Cat6A only if a run is long or bundled tight.</p>
+    <h3>No 10G anywhere, deliberately</h3>
+    <p>The APs link at 2.5G into the Flex, and <strong>the Flex uplinks to the UDM Pro at
+    1 GbE</strong> over RJ45. No SFP+, no DAC, nothing to buy.</p>
+
+    <p>That is the right call here. Almost every packet on the wireless side is
+    internet-bound, and the UDM Pro's WAN1 is a 1 GbE RJ45 port — so the circuit itself
+    caps the site at 1 Gbps regardless of what the Flex uplink could do. There is no local
+    wired destination for wireless clients to saturate: the cameras are on their own
+    Cradlepoint, the POS is cloud, and there is no file server. A 10G uplink would idle.</p>
+
+    <div class="note">
+      <h4>What would change this</h4>
+      <p>An internet circuit faster than 1 Gbps. That would mean moving WAN1 to the UDM
+      Pro's 10G SFP+ port, and the Flex uplink would then become the site's bottleneck.
+      Revisit it that day, not before.</p>
+    </div>
+
+    <p>Cat6 is fine for every run here; Cat6A only if a run is long or bundled tight.</p>
   </div>
 </section>
 
@@ -409,7 +420,7 @@ Total                     <b>125 W</b></pre>
 
     <figure>
       <div class="diagram">
-      <svg viewBox="0 0 860 506" role="img" aria-label="Topology: the ISP feeds the Dream Machine Pro in a neutral rack. The Flex 2.5G PoE switch, powered by its AC adapter, uplinks over 10G SFP+ and powers all five access points plus the 5G Backup. Two non-PoE Switch 24s, one per tenant, uplink at 1 GbE. The third-party camera system sits on its own Cradlepoint cellular circuit and is not connected to this network at all. Traffic between the bar and dispensary sides is blocked.">
+      <svg viewBox="0 0 860 506" role="img" aria-label="Topology: the ISP feeds the Dream Machine Pro in a neutral rack. The Flex 2.5G PoE switch, powered by its AC adapter, uplinks at 1 GbE and powers all five access points plus the 5G Backup. Two non-PoE Switch 24s, one per tenant, uplink at 1 GbE. The third-party camera system sits on its own Cradlepoint cellular circuit and is not connected to this network at all. Traffic between the bar and dispensary sides is blocked.">
         <rect class="d-box" x="368" y="4" width="124" height="34" rx="4"/>
         <text class="d-t" x="430" y="26" text-anchor="middle">ISP handoff</text>
         <path class="d-line" d="M430 38 V 62"/>
@@ -423,7 +434,7 @@ Total                     <b>125 W</b></pre>
         <text class="d-s" x="430" y="127" text-anchor="middle">gateway + controller</text>
 
         <path class="d-line" d="M430 136 V 160"/>
-        <text class="d-s" x="440" y="154">10G SFP+ DAC</text>
+        <text class="d-s" x="440" y="154">1 GbE</text>
 
         <rect class="d-box-a" x="336" y="160" width="188" height="46" rx="4"/>
         <text class="d-t" x="430" y="182" text-anchor="middle">Flex 2.5G PoE</text>
@@ -790,7 +801,6 @@ Total                     <b>125 W</b></pre>
     <h3>Before install day</h3>
     <ul class="check">
       <li><input type="checkbox" id="a1" checked><span><label for="a1">Order the <b>210 W AC adapter</b> for the Flex</label> <span class="ref">§00</span></span></li>
-      <li><input type="checkbox" id="a2"><span><label for="a2">Order a 10G SFP+ DAC for the Flex → UDM Pro uplink</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a3"><span><label for="a3">Order a rack UPS — the PDU is not one</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a4d"><span><label for="a4d">Ask whether the dispensary is a multi-location operator</label> <span class="ref">§08</span></span></li>
       <li><input type="checkbox" id="a5"><span><label for="a5">Label the Cradlepoint and camera patch cables "do not patch"</label> <span class="ref">§07</span></span></li>
@@ -821,7 +831,7 @@ Total                     <b>125 W</b></pre>
 </section>
 
 <footer>
-  <span>Design doc · revision 6</span>
+  <span>Design doc · revision 7</span>
   <span>Built against the confirmed bill of materials</span>
   <span>Specs verified at techspecs.ui.com</span>
 </footer>

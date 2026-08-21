@@ -26,7 +26,6 @@ flaky APs, not a power problem.
 
 | Item | Approx. | Why |
 |------|---------|-----|
-| 10G SFP+ DAC cable | ~$15-30 | Flex to UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE |
 | Rack UPS | varies | The PDU is remote-reboot, not battery. A blip drops both tenants' POS mid-transaction |
 | 3.5" HDD | optional | Only if UniFi Protect gets added to the UDM Pro later |
 
@@ -73,7 +72,7 @@ Everything else in this document assumes it stays that way.
 | Flex 2.5G PoE (8) | 5 APs + 5G Backup = **6** | 2 |
 | Switch 24 — bar (24) | POS, KDS, printers, TVs, office | plenty |
 | Switch 24 — dispensary (24) | POS, ID scanners, office, NVR | plenty |
-| UDM Pro LAN | Flex on SFP+, 2× Switch 24 on RJ45 | 6 |
+| UDM Pro LAN | Flex + 2× Switch 24, all on RJ45 | 5 |
 
 ### Two consequences of the non-PoE Switch 24s
 
@@ -84,12 +83,22 @@ Everything else in this document assumes it stays that way.
    scanners on either side have no power source. See section 7 — this matters for the
    dispensary specifically.
 
-### The 10G uplink on the APs will not be used
-The U7 Pro XG has a 10 GbE uplink; the Flex's access ports are 2.5 GbE, so the APs
-link at 2.5G. **Do not chase this** — 2.5G per AP is far more than a bar will ever
-generate. But tell the client now rather than let them find it later: the XG premium
-is not being realized on this switch. Cat6 is fine for these runs; Cat6A only if a
-run is long or bundled tight.
+### No 10G anywhere, deliberately
+
+The APs link at 2.5G into the Flex, and **the Flex uplinks to the UDM Pro at 1 GbE**
+over RJ45. No SFP+, no DAC, nothing to buy.
+
+That is the right call here. Almost every packet on the wireless side is
+internet-bound, and the UDM Pro's WAN1 is a 1 GbE RJ45 port — so the circuit itself
+caps the site at 1 Gbps regardless of what the Flex uplink could do. There is no local
+wired destination for wireless clients to saturate: the cameras are on their own
+Cradlepoint, the POS is cloud, and there is no file server. A 10G uplink would idle.
+
+The one thing that would change this is an internet circuit faster than 1 Gbps. That
+would mean moving WAN1 to the UDM Pro's 10G SFP+ port, and the Flex uplink would then
+become the site's bottleneck. Revisit it that day, not before.
+
+Cat6 is fine for every run here; Cat6A only if a run is long or bundled tight.
 
 ---
 
@@ -102,7 +111,7 @@ run is long or bundled tight.
                               |
    ┌─────────────── NEUTRAL RACK ────────────────┐
    │  [ Dream Machine Pro ]                      │
-   │       |  10G SFP+ (DAC)                     │
+   │       |  1 GbE                              │
    │  [ Flex 2.5G PoE ] ── 210W AC adapter       │
    │       |                                     │
    │       ├── 5 x U7 Pro XG   (all home-run)    │
@@ -353,7 +362,6 @@ If a second circuit is at all affordable, **give the dispensary its own** and us
 
 **Before install day**
 - [x] ~~Order the **210 W AC adapter** for the Flex~~ — ordered (§0)
-- [ ] Order a 10G SFP+ DAC for the Flex → UDM Pro uplink (§0)
 - [ ] Order a rack UPS — the PDU is not one (§0)
 - [ ] Ask whether the dispensary is a multi-location operator (§8)
 - [ ] Label the Cradlepoint and camera patch cables "do not patch" (§7)

@@ -14,6 +14,23 @@ Worth stating plainly, because it is the first thing people look for:
 So the closest equivalent to "upload a config" is to drive the controller's REST API.
 That is what `scripts/provision_unifi.py` does.
 
+## SSH is not a provisioning path
+
+Worth knowing before someone tries it: UniFi OS keeps network configuration in the
+controller's database and regenerates device config on every provision cycle. Anything
+hand-edited over SSH on the gateway or a switch **gets overwritten the next time the
+controller pushes config**.
+
+That is the whole reason this script talks to the controller API — it writes to the
+system of record instead of around it.
+
+SSH is still worth having for diagnosis: device state, live traffic capture, a config
+dump, restarting a service. Use it to find out why something is wrong, never to change
+what it should be.
+
+The same applies to running this script: it has to run from a machine **on the site
+LAN** with a route to the gateway. There is no remote path in.
+
 ## What is scripted and what is not
 
 | | Where | Why |

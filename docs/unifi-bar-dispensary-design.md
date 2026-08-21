@@ -138,7 +138,7 @@ to whoever owns the rack. See section 9.
 | 12 | BAR-IOT | 10.0.12.0/24 | Bar | TVs, digital menu boards, cooler sensors, music |
 | 20 | DISP-POS | 10.0.20.0/24 | Dispensary | POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners |
 | 21 | DISP-BACK | 10.0.21.0/24 | Dispensary | Back office, vault-room PC |
-| 22 | DISP-CAM | 10.0.22.0/24 | Cameras | Existing/third-party surveillance — isolated, see section 7 |
+| 22 | DISP-CAM | 10.0.22.0/24 | Cameras | **Reserved, unused** — surveillance is on its own Cradlepoint, see §7 |
 | 30 | GUEST | 10.0.30.0/22 | Guest | Shared public Wi-Fi, both halves |
 | 31 | STAFF | 10.0.31.0/24 | Staff | Shared staff Wi-Fi — see section 5 |
 
@@ -159,9 +159,8 @@ Start default-deny between zones, open only what breaks.
 | Guest | any internal | **BLOCK** | Plus client isolation on the SSID |
 | Guest | Internet | ALLOW | Rate-limited, see section 8 |
 | Staff | any POS | **BLOCK** | Staff phones never touch card networks |
-| Cameras | any zone | **BLOCK** | Surveillance talks to its recorder only |
-| Cameras | Internet | **BLOCK** | Only the recorder gets out, if at all |
-| Dispensary | recorder, named ports | ALLOW | Licensee viewing |
+| Cameras | any zone | **BLOCK** | Policy stays written; VLAN 22 is dormant today (§7) |
+| Cameras | Internet | **BLOCK** | Same — dormant, ready if the system ever moves onto this circuit |
 | Guest / Staff | Mgmt | **BLOCK** | No exceptions |
 | Admin device | Mgmt | ALLOW | Single jump host or admin VLAN |
 
@@ -228,77 +227,46 @@ not coverage: overlapping cells at lower TX power.
 
 ---
 
-## 7. Third-party surveillance
+## 7. Surveillance — out of scope
 
-Their system, their gear, their vendor. It stays a **black box on VLAN 22** — do not
-integrate it into your VLAN scheme beyond a single uplink port. You do not want to own
-troubleshooting another vendor's cameras, and their recorder may run its own DHCP
-server on its camera side.
+Their cameras run on their own **Cradlepoint cellular router**, physically and
+logically separate from everything in this design. That resolves the whole section:
 
-### Three questions to ask before install day
+- No PoE requirement on the dispensary Switch 24
+- No VLAN 22 traffic to route or filter
+- No outbound internet policy to write for camera gear
+- No sustained camera upload competing with the bar on the shared circuit
+- Nothing riding the 5G Backup's 10 GB
 
-**1. Does the NVR have built-in PoE ports?**
-Most compliance-grade recorders do — Hikvision, Dahua, and their OEM relabels (Lorex,
-LTS, Annke, Uniview). If yes, this is the best possible outcome:
+It also strengthens the compliance position in §9: the licensee's surveillance
+genuinely does not touch the bar's network, or yours.
 
-- The cameras plug into the NVR itself, which runs its own isolated camera subnet on
-  its internal switch (Dahua defaults to 10.1.1.x, Hikvision to 192.168.254.x).
-- **Those cameras never touch your network.** You will never see them, address them, or
-  troubleshoot them.
-- **Only the NVR's LAN port lands on the dispensary Switch 24**, as an access port on
-  VLAN 22.
-- The Switch 24's lack of PoE becomes a non-issue.
+### Three things still worth doing
 
-**2. Or is it a cloud system?** (Verkada, Rhombus, Eagle Eye, Solink — PoE cameras
-talking straight to the vendor, no local recorder.)
+**1. Never bridge the Cradlepoint into the LAN.**
+The temptation will come — someone wants to view cameras from a back-office PC and
+patches the Cradlepoint's LAN port into the Switch 24. Do not let that happen. It drops
+an uncontrolled cellular WAN onto the network with its own DHCP server and a second
+default gateway, and it quietly undoes the isolation the separate circuit was buying.
+If they want desktop viewing, use the vendor's app over the store's normal internet.
 
-- Those cameras need PoE and the Switch 24 cannot provide it. They will almost
-  certainly already have their own PoE switch — leave it in place and uplink it into
-  the dispensary Switch 24 as an access port on VLAN 22.
-- If they do not have one, add a small PoE switch dedicated to cameras on the
-  dispensary side. **Do not hang them off the Flex** — that is shared infrastructure in
-  the neutral rack, and the camera plant should be dispensary-owned.
-- These upload continuously. See bandwidth, below.
+**2. Turn on DHCP guard.**
+Specify trusted DHCP server addresses on the UniFi networks so a stray router — the
+Cradlepoint or anything else someone plugs in — cannot start handing out leases.
+Label the camera gear and its patch cables so nobody "tidies" them into the rack.
 
-**3. Does the system require its own internet circuit?** Some camera vendors and some
-state rules insist on it. Ask rather than assume.
+**3. Keep VLAN 22 reserved but unused.**
+Costs nothing. Cellular data plans for a full camera system are expensive, and if the
+system ever migrates onto the building's circuit, the VLAN and its firewall policy are
+already designed and waiting.
 
-### Firewall for VLAN 22
+### If it ever does move onto the building circuit
 
-| From | To | Action |
-|------|-----|--------|
-| DISP-BACK | Recorder, viewing ports only | ALLOW |
-| VLAN 22 | Bar zone | **BLOCK** |
-| VLAN 22 | Any other internal zone | **BLOCK** |
-| VLAN 22 | Internet | Judgment call — see below |
-
-Outbound internet is the one real decision:
-
-- **Local NVR of Hikvision/Dahua lineage:** allow NTP and the vendor's P2P endpoints
-  only — or block outbound entirely and give the owner remote access through a
-  **WireGuard VPN on the UDM Pro** instead. These devices have a long CVE history and
-  no business having open internet. The VPN route is more work up front and materially
-  better.
-- **Cloud system:** it needs persistent outbound HTTPS to the vendor or it stops
-  recording. Allow exactly that, block everything else. Get the endpoint list from the
-  vendor rather than guessing.
-
-Give the recorder a **DHCP reservation** on VLAN 22, not a static address outside the
-pool.
-
-### Bandwidth
-
-A cloud camera system uploads continuously — 10–30 Mbps sustained is normal for a
-store's worth of cameras. On a shared circuit that is bandwidth the bar is also paying
-for, in latency. Check the circuit's **upload** speed specifically, and rate-limit
-VLAN 22 on the primary WAN. It stays excluded from 5G failover (§8) — 10 GB would
-evaporate.
-
-### Compliance
-
-Unchanged: most states require 30–90 day retention and access **only by the licensee**.
-That is a direct argument against the bar's owner holding console credentials that can
-reach VLAN 22 — see §9. Confirm the state rules; they are prescriptive and they vary.
+Treat it as a black box behind one port: recorder on VLAN 22, reachable only from
+DISP-BACK on named viewing ports, no route to the bar zone or any other internal zone.
+Outbound internet allowed only to the vendor's endpoints and NTP — or blocked entirely,
+with remote viewing through a WireGuard VPN on the UDM Pro. Recorders of
+Hikvision/Dahua lineage have a long CVE history and no business with open internet.
 
 ---
 
@@ -371,9 +339,10 @@ complete on both sides, then confirm guest traffic did not ride along.
    limited login.
 3. **Shared APs.** All five run off one PoE switch in one rack. The tenant who does not
    own that rack is depending on the one who does for their Wi-Fi.
-4. **Compliance may forbid the premise.** The dispensary's rules may not permit shared
-   infrastructure for surveillance or seed-to-sale. Confirm against state regulation
-   *early*. If it does not fly, the answer is a second circuit and a second gateway.
+4. **Compliance may forbid the premise.** Surveillance is already clear — it lives on
+   its own Cradlepoint circuit (§7). Seed-to-sale is the remaining question: confirm
+   against state regulation *early* that it may share infrastructure with an unrelated
+   business. If it may not, the answer is a second circuit and a second gateway.
 
 If a second circuit is at all affordable, **give the dispensary its own** and use the
 5G Backup on the bar.
@@ -386,11 +355,8 @@ If a second circuit is at all affordable, **give the dispensary its own** and us
 - [x] ~~Order the **210 W AC adapter** for the Flex~~ — ordered (§0)
 - [ ] Order a 10G SFP+ DAC for the Flex → UDM Pro uplink (§0)
 - [ ] Order a rack UPS — the PDU is not one (§0)
-- [ ] Confirm whether the third-party NVR has built-in PoE ports (§7)
-- [ ] Get the camera vendor's required outbound endpoints (§7)
 - [ ] Ask whether the dispensary is a multi-location operator (§8)
-- [ ] Confirm state surveillance and retention requirements (§7)
-- [ ] Check the circuit's **upload** speed against camera cloud upload (§7)
+- [ ] Label the Cradlepoint and camera patch cables "do not patch" (§7)
 - [ ] Confirm who owns the circuit, the rack, and the UniFi console (§9)
 
 **Install**
@@ -406,5 +372,6 @@ If a second circuit is at all affordable, **give the dispensary its own** and us
 **Before handover**
 - [ ] Configure failover with guest excluded, set a data alert under 10 GB (§8)
 - [ ] Test failover: pull WAN1, complete a card transaction on both sides (§8)
+- [ ] Enable DHCP guard with trusted server addresses on every network (§7)
 - [ ] Enable auto-backup, set admin accounts, disable unused remote access
 - [ ] Label every port and drop at both ends

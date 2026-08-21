@@ -174,6 +174,7 @@ td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
   display:inline-block;font-family:'JetBrains Mono',ui-monospace,monospace;
   font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   padding:3px 7px;border-radius:3px;white-space:nowrap;
+  color:var(--ink-3);background:var(--surface-2);border:1px solid var(--rule);
 }
 .tag.block{color:var(--alert);background:var(--alert-soft);border:1px solid var(--alert)}
 .tag.allow{color:var(--disp);background:var(--disp-soft);border:1px solid var(--disp)}
@@ -408,7 +409,7 @@ Total                     <b>125 W</b></pre>
 
     <figure>
       <div class="diagram">
-      <svg viewBox="0 0 860 506" role="img" aria-label="Topology: the ISP feeds the Dream Machine Pro in a neutral rack. The Flex 2.5G PoE switch, powered by its AC adapter, uplinks over 10G SFP+ and powers all five access points plus the 5G Backup. Two non-PoE Switch 24s, one per tenant, uplink at 1 GbE. A third-party NVR and its cameras hang off the dispensary switch on VLAN 22 with their own PoE and subnet. Traffic between the bar and dispensary sides is blocked.">
+      <svg viewBox="0 0 860 506" role="img" aria-label="Topology: the ISP feeds the Dream Machine Pro in a neutral rack. The Flex 2.5G PoE switch, powered by its AC adapter, uplinks over 10G SFP+ and powers all five access points plus the 5G Backup. Two non-PoE Switch 24s, one per tenant, uplink at 1 GbE. The third-party camera system sits on its own Cradlepoint cellular circuit and is not connected to this network at all. Traffic between the bar and dispensary sides is blocked.">
         <rect class="d-box" x="368" y="4" width="124" height="34" rx="4"/>
         <text class="d-t" x="430" y="26" text-anchor="middle">ISP handoff</text>
         <path class="d-line" d="M430 38 V 62"/>
@@ -456,16 +457,15 @@ Total                     <b>125 W</b></pre>
         <text class="d-s" x="578" y="387">POS · seed-to-sale</text>
         <text class="d-s" x="578" y="407">ID scanners · office</text>
 
-        <path class="d-line" d="M680 422 V 438"/>
-        <rect x="560" y="438" width="240" height="46" rx="4" fill="none" stroke="var(--cam)" stroke-width="1.25" stroke-dasharray="5 4"/>
-        <text class="d-s" x="578" y="459" fill="var(--cam)">3rd-party NVR + cameras</text>
-        <text class="d-s" x="578" y="477" fill="var(--cam)">VLAN 22 · own PoE, own subnet</text>
+        <rect x="560" y="440" width="240" height="46" rx="4" fill="none" stroke="var(--cam)" stroke-width="1.25" stroke-dasharray="5 4"/>
+        <text class="d-s" x="578" y="461" fill="var(--cam)">3rd-party cameras · Cradlepoint</text>
+        <text class="d-s" x="578" y="479" fill="var(--cam)">own cellular circuit — not connected</text>
 
         <path class="d-bar-line" d="M430 284 V 486"/>
         <text class="d-l" x="430" y="500" text-anchor="middle">Bar ⇄ Dispensary — blocked</text>
       </svg>
       </div>
-      <figcaption>The Flex is the single point of PoE, so every AP drop terminates in the neutral rack. The camera plant stays a black box behind one port.</figcaption>
+      <figcaption>The Flex is the single point of PoE, so every AP drop terminates in the neutral rack. The camera plant never touches it.</figcaption>
     </figure>
 
     <div class="note">
@@ -499,7 +499,7 @@ Total                     <b>125 W</b></pre>
         <tr class="t-bar"><td>12</td><td>BAR-IOT</td><td class="mono">10.0.12.0/24</td><td>Bar</td><td>TVs, digital menu boards, cooler sensors, music</td></tr>
         <tr class="t-disp"><td>20</td><td>DISP-POS</td><td class="mono">10.0.20.0/24</td><td>Dispensary</td><td>POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners</td></tr>
         <tr class="t-disp"><td>21</td><td>DISP-BACK</td><td class="mono">10.0.21.0/24</td><td>Dispensary</td><td>Back office, vault-room PC</td></tr>
-        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td>Existing/third-party surveillance — isolated, see §07</td></tr>
+        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td><span class="tag">Reserved</span> unused — surveillance is on its own Cradlepoint, see §07</td></tr>
         <tr class="t-open"><td>30</td><td>GUEST</td><td class="mono">10.0.30.0/22</td><td>Guest</td><td>Shared public Wi-Fi, both halves</td></tr>
         <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.31.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05</td></tr>
       </tbody>
@@ -526,9 +526,8 @@ Total                     <b>125 W</b></pre>
         <tr class="t-open"><td>Guest</td><td>Any internal</td><td><span class="tag block">Block</span></td><td>Plus client isolation on the SSID itself</td></tr>
         <tr class="t-open"><td>Guest</td><td>Internet</td><td><span class="tag allow">Allow</span></td><td>Rate-limited — see §08</td></tr>
         <tr class="t-open"><td>Staff</td><td>Any POS</td><td><span class="tag block">Block</span></td><td>Staff phones never touch card networks</td></tr>
-        <tr class="t-cam"><td>Cameras</td><td>Any zone</td><td><span class="tag block">Block</span></td><td>Surveillance talks to its recorder only</td></tr>
-        <tr class="t-cam"><td>Cameras</td><td>Internet</td><td><span class="tag block">Block</span></td><td>Only the recorder gets out, if at all</td></tr>
-        <tr class="t-disp"><td>Dispensary</td><td>Recorder, named ports</td><td><span class="tag allow">Allow</span></td><td>Licensee viewing</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Any zone</td><td><span class="tag block">Block</span></td><td>Policy stays written; VLAN 22 is dormant today (§07)</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Internet</td><td><span class="tag block">Block</span></td><td>Same — ready if the system ever moves onto this circuit</td></tr>
         <tr class="t-open"><td>Guest / Staff</td><td>Mgmt</td><td><span class="tag block">Block</span></td><td>No exceptions</td></tr>
         <tr class="t-sys"><td>Admin device</td><td>Mgmt</td><td><span class="tag allow">Allow</span></td><td>Single jump host or admin VLAN</td></tr>
       </tbody>
@@ -621,81 +620,54 @@ Total                     <b>125 W</b></pre>
 <section>
   <div class="num">§&thinsp;07</div>
   <div class="body">
-    <h2>Third-party surveillance</h2>
-    <p class="sub">Their gear, their vendor. It stays a black box on one VLAN.</p>
+    <h2>Surveillance — out of scope</h2>
+    <p class="sub">The cameras run on their own Cradlepoint cellular router. That resolves the whole section.</p>
 
-    <p>Do not integrate their system into your VLAN scheme beyond a single uplink port.
-    You do not want to own troubleshooting another vendor's cameras, and their recorder
-    may run its own DHCP server on its camera side.</p>
+    <p>Their system is physically and logically separate from everything in this design:</p>
+    <ul>
+      <li>No PoE requirement on the dispensary Switch 24</li>
+      <li>No VLAN 22 traffic to route or filter</li>
+      <li>No outbound internet policy to write for camera gear</li>
+      <li>No sustained camera upload competing with the bar on the shared circuit</li>
+      <li>Nothing riding the 5G Backup's 10 GB</li>
+    </ul>
 
-    <h3>Three questions to ask before install day</h3>
+    <p>It also strengthens the compliance position in §09: the licensee's surveillance
+    genuinely does not touch the bar's network, or yours.</p>
 
-    <div class="note disp">
-      <h4>1 — Does the NVR have built-in PoE ports?</h4>
-      <p>Most compliance-grade recorders do — Hikvision, Dahua, and their OEM relabels
-      (Lorex, LTS, Annke, Uniview). If yes, this is the best possible outcome: the
-      cameras plug into the NVR itself, which runs its own isolated camera subnet on its
-      internal switch (Dahua defaults to <code>10.1.1.x</code>, Hikvision to
-      <code>192.168.254.x</code>).</p>
-      <p><strong>Those cameras never touch your network.</strong> Only the NVR's LAN port
-      lands on the dispensary Switch 24, as an access port on VLAN 22 — and the Switch
-      24's lack of PoE becomes a non-issue.</p>
-    </div>
-
-    <div class="note disp">
-      <h4>2 — Or is it a cloud system?</h4>
-      <p>Verkada, Rhombus, Eagle Eye, Solink — PoE cameras talking straight to the
-      vendor, no local recorder. Those cameras need PoE and the Switch 24 cannot provide
-      it. They will almost certainly already have their own PoE switch: leave it in place
-      and uplink it into the dispensary Switch 24 as an access port on VLAN 22.</p>
-      <p>If they do not have one, add a small PoE switch on the dispensary side.
-      <strong>Do not hang them off the Flex</strong> — that is shared infrastructure in the
-      neutral rack, and the camera plant should be dispensary-owned.</p>
-    </div>
-
-    <div class="note disp">
-      <h4>3 — Does it require its own internet circuit?</h4>
-      <p>Some camera vendors and some state rules insist on it. Ask rather than assume.</p>
-    </div>
-
-    <h3>Firewall for VLAN 22</h3>
-    <div class="scroll"><table>
-      <thead><tr><th>From</th><th>To</th><th>Action</th></tr></thead>
-      <tbody>
-        <tr class="t-disp"><td>DISP-BACK</td><td>Recorder, viewing ports only</td><td><span class="tag allow">Allow</span></td></tr>
-        <tr class="t-cam"><td>VLAN 22</td><td>Bar zone</td><td><span class="tag block">Block</span></td></tr>
-        <tr class="t-cam"><td>VLAN 22</td><td>Any other internal zone</td><td><span class="tag block">Block</span></td></tr>
-        <tr class="t-cam"><td>VLAN 22</td><td>Internet</td><td>Judgment call — below</td></tr>
-      </tbody>
-    </table></div>
+    <h3>Three things still worth doing</h3>
 
     <div class="note warn">
-      <h4>Outbound internet is the one real decision</h4>
-      <p><strong>Local NVR of Hikvision/Dahua lineage:</strong> allow NTP and the vendor's
-      P2P endpoints only — or block outbound entirely and give the owner remote access
-      through a <strong>WireGuard VPN on the UDM Pro</strong> instead. These devices have a
-      long CVE history and no business having open internet. The VPN route is more work
-      up front and materially better.</p>
-      <p><strong>Cloud system:</strong> it needs persistent outbound HTTPS to the vendor or
-      it stops recording. Allow exactly that, block everything else. Get the endpoint list
-      from the vendor rather than guessing.</p>
+      <h4>1 — Never bridge the Cradlepoint into the LAN</h4>
+      <p>The temptation will come: someone wants to view cameras from a back-office PC and
+      patches the Cradlepoint's LAN port into the Switch 24. <strong>Do not let that
+      happen.</strong> It drops an uncontrolled cellular WAN onto the network with its own
+      DHCP server and a second default gateway, and it quietly undoes the isolation the
+      separate circuit was buying. If they want desktop viewing, use the vendor's app over
+      the store's normal internet.</p>
     </div>
 
-    <p>Give the recorder a <strong>DHCP reservation</strong> on VLAN 22, not a static address
-    outside the pool.</p>
+    <div class="note">
+      <h4>2 — Turn on DHCP guard</h4>
+      <p>Specify trusted DHCP server addresses on the UniFi networks so a stray router —
+      the Cradlepoint or anything else someone plugs in — cannot start handing out leases.
+      Label the camera gear and its patch cables so nobody "tidies" them into the rack.</p>
+    </div>
 
-    <h3>Bandwidth</h3>
-    <p>A cloud camera system uploads continuously — <strong>10–30 Mbps sustained</strong> is
-    normal for a store's worth of cameras. On a shared circuit that is bandwidth the bar
-    is also paying for, in latency. Check the circuit's <em>upload</em> speed specifically
-    and rate-limit VLAN 22 on the primary WAN. It stays excluded from 5G failover (§08) —
-    10 GB would evaporate.</p>
+    <div class="note">
+      <h4>3 — Keep VLAN 22 reserved but unused</h4>
+      <p>Costs nothing. Cellular data plans for a full camera system are expensive, and if
+      the system ever migrates onto the building's circuit, the VLAN and its firewall
+      policy are already designed and waiting.</p>
+    </div>
 
-    <h3>Compliance</h3>
-    <p>Unchanged: most states require 30–90 day retention and access <strong>only by the
-    licensee</strong>. That is a direct argument against the bar's owner holding console
-    credentials that can reach VLAN 22 — see §09. Confirm the state rules; they are
-    prescriptive and they vary.</p>
+    <h3>If it ever does move onto the building circuit</h3>
+    <p>Treat it as a black box behind one port: recorder on VLAN 22, reachable only from
+    DISP-BACK on named viewing ports, no route to the bar zone or any other internal
+    zone. Outbound internet allowed only to the vendor's endpoints and NTP — or blocked
+    entirely, with remote viewing through a <strong>WireGuard VPN on the UDM Pro</strong>.
+    Recorders of Hikvision/Dahua lineage have a long CVE history and no business with
+    open internet.</p>
 
   </div>
 </section>
@@ -723,7 +695,7 @@ Total                     <b>125 W</b></pre>
         <tr class="t-disp"><td>Dispensary POS + seed-to-sale</td><td><span class="tag allow">Allow</span></td><td>Compliance reporting cannot stall</td></tr>
         <tr class="t-open"><td>Staff Wi-Fi</td><td><span class="tag allow">Capped</span></td><td>Ops messaging only</td></tr>
         <tr class="t-open"><td>Guest SSID</td><td><span class="tag block">Exclude</span></td><td>Would burn the entire data pack in an afternoon</td></tr>
-        <tr class="t-cam"><td>Surveillance remote view</td><td><span class="tag block">Exclude</span></td><td>Recording continues locally regardless</td></tr>
+        
       </tbody>
     </table></div>
 
@@ -797,9 +769,10 @@ Total                     <b>125 W</b></pre>
 
     <div class="note warn">
       <h4>Four — compliance may forbid the premise</h4>
-      <p>The dispensary's rules may not permit shared infrastructure for surveillance or
-      seed-to-sale. Confirm against state regulation <em>early</em>. If it does not fly, the
-      answer is a second circuit and a second gateway.</p>
+      <p>Surveillance is already clear — it lives on its own Cradlepoint circuit (§07).
+      Seed-to-sale is the remaining question: confirm against state regulation
+      <em>early</em> that it may share infrastructure with an unrelated business. If it may
+      not, the answer is a second circuit and a second gateway.</p>
     </div>
 
     <p>If a second circuit is at all affordable, <strong>give the dispensary its own</strong> and
@@ -819,11 +792,8 @@ Total                     <b>125 W</b></pre>
       <li><input type="checkbox" id="a1" checked><span><label for="a1">Order the <b>210 W AC adapter</b> for the Flex</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a2"><span><label for="a2">Order a 10G SFP+ DAC for the Flex → UDM Pro uplink</label> <span class="ref">§00</span></span></li>
       <li><input type="checkbox" id="a3"><span><label for="a3">Order a rack UPS — the PDU is not one</label> <span class="ref">§00</span></span></li>
-      <li><input type="checkbox" id="a4"><span><label for="a4">Confirm whether the third-party NVR has built-in PoE ports</label> <span class="ref">§07</span></span></li>
-      <li><input type="checkbox" id="a4b"><span><label for="a4b">Get the camera vendor's required outbound endpoints</label> <span class="ref">§07</span></span></li>
-      <li><input type="checkbox" id="a4c"><span><label for="a4c">Check the circuit's <b>upload</b> speed against camera cloud upload</label> <span class="ref">§07</span></span></li>
       <li><input type="checkbox" id="a4d"><span><label for="a4d">Ask whether the dispensary is a multi-location operator</label> <span class="ref">§08</span></span></li>
-      <li><input type="checkbox" id="a5"><span><label for="a5">Confirm state surveillance and retention requirements</label> <span class="ref">§07</span></span></li>
+      <li><input type="checkbox" id="a5"><span><label for="a5">Label the Cradlepoint and camera patch cables "do not patch"</label> <span class="ref">§07</span></span></li>
       <li><input type="checkbox" id="a6"><span><label for="a6">Confirm who owns the circuit, the rack, and the UniFi console</label> <span class="ref">§09</span></span></li>
     </ul>
 
@@ -843,6 +813,7 @@ Total                     <b>125 W</b></pre>
     <ul class="check">
       <li><input type="checkbox" id="d1"><span><label for="d1">Configure failover with guest excluded, set a data alert under 10 GB</label> <span class="ref">§08</span></span></li>
       <li><input type="checkbox" id="d2"><span><label for="d2">Test failover: pull WAN1, complete a card transaction on both sides</label> <span class="ref">§08</span></span></li>
+      <li><input type="checkbox" id="d2b"><span><label for="d2b">Enable DHCP guard with trusted server addresses on every network</label> <span class="ref">§07</span></span></li>
       <li><input type="checkbox" id="d3"><span><label for="d3">Enable auto-backup, set admin accounts, disable unused remote access</label> <span class="ref">§09</span></span></li>
       <li><input type="checkbox" id="d4"><span><label for="d4">Label every port and drop at both ends</label></span></li>
     </ul>
@@ -850,7 +821,7 @@ Total                     <b>125 W</b></pre>
 </section>
 
 <footer>
-  <span>Design doc · revision 5</span>
+  <span>Design doc · revision 6</span>
   <span>Built against the confirmed bill of materials</span>
   <span>Specs verified at techspecs.ui.com</span>
 </footer>

@@ -228,22 +228,77 @@ not coverage: overlapping cells at lower TX power.
 
 ---
 
-## 7. Dispensary surveillance
+## 7. Third-party surveillance
 
-No cameras in this order — so the dispensary's surveillance is either existing or
-coming from a third party. Two things still apply:
+Their system, their gear, their vendor. It stays a **black box on VLAN 22** — do not
+integrate it into your VLAN scheme beyond a single uplink port. You do not want to own
+troubleshooting another vendor's cameras, and their recorder may run its own DHCP
+server on its camera side.
 
-1. **It gets VLAN 22 and full isolation** regardless of vendor. Recorder reachable only
-   from DISP-BACK on named ports; cameras themselves get no internet and no route to
-   any other zone.
-2. **The Switch 24 has no PoE.** If that system's cameras are PoE — most are — the
-   dispensary's switch cannot power them. They will need their own PoE switch or
-   injectors. Find out which before install day rather than on it.
+### Three questions to ask before install day
 
-Most states also require the surveillance system be accessible **only to the
-licensee**, with 30–90 day retention. That is a direct argument against the bar's owner
-holding controller credentials that can reach VLAN 22 — see section 9. Confirm the
-state rules; they are prescriptive and they vary.
+**1. Does the NVR have built-in PoE ports?**
+Most compliance-grade recorders do — Hikvision, Dahua, and their OEM relabels (Lorex,
+LTS, Annke, Uniview). If yes, this is the best possible outcome:
+
+- The cameras plug into the NVR itself, which runs its own isolated camera subnet on
+  its internal switch (Dahua defaults to 10.1.1.x, Hikvision to 192.168.254.x).
+- **Those cameras never touch your network.** You will never see them, address them, or
+  troubleshoot them.
+- **Only the NVR's LAN port lands on the dispensary Switch 24**, as an access port on
+  VLAN 22.
+- The Switch 24's lack of PoE becomes a non-issue.
+
+**2. Or is it a cloud system?** (Verkada, Rhombus, Eagle Eye, Solink — PoE cameras
+talking straight to the vendor, no local recorder.)
+
+- Those cameras need PoE and the Switch 24 cannot provide it. They will almost
+  certainly already have their own PoE switch — leave it in place and uplink it into
+  the dispensary Switch 24 as an access port on VLAN 22.
+- If they do not have one, add a small PoE switch dedicated to cameras on the
+  dispensary side. **Do not hang them off the Flex** — that is shared infrastructure in
+  the neutral rack, and the camera plant should be dispensary-owned.
+- These upload continuously. See bandwidth, below.
+
+**3. Does the system require its own internet circuit?** Some camera vendors and some
+state rules insist on it. Ask rather than assume.
+
+### Firewall for VLAN 22
+
+| From | To | Action |
+|------|-----|--------|
+| DISP-BACK | Recorder, viewing ports only | ALLOW |
+| VLAN 22 | Bar zone | **BLOCK** |
+| VLAN 22 | Any other internal zone | **BLOCK** |
+| VLAN 22 | Internet | Judgment call — see below |
+
+Outbound internet is the one real decision:
+
+- **Local NVR of Hikvision/Dahua lineage:** allow NTP and the vendor's P2P endpoints
+  only — or block outbound entirely and give the owner remote access through a
+  **WireGuard VPN on the UDM Pro** instead. These devices have a long CVE history and
+  no business having open internet. The VPN route is more work up front and materially
+  better.
+- **Cloud system:** it needs persistent outbound HTTPS to the vendor or it stops
+  recording. Allow exactly that, block everything else. Get the endpoint list from the
+  vendor rather than guessing.
+
+Give the recorder a **DHCP reservation** on VLAN 22, not a static address outside the
+pool.
+
+### Bandwidth
+
+A cloud camera system uploads continuously — 10–30 Mbps sustained is normal for a
+store's worth of cameras. On a shared circuit that is bandwidth the bar is also paying
+for, in latency. Check the circuit's **upload** speed specifically, and rate-limit
+VLAN 22 on the primary WAN. It stays excluded from 5G failover (§8) — 10 GB would
+evaporate.
+
+### Compliance
+
+Unchanged: most states require 30–90 day retention and access **only by the licensee**.
+That is a direct argument against the bar's owner holding console credentials that can
+reach VLAN 22 — see §9. Confirm the state rules; they are prescriptive and they vary.
 
 ---
 
@@ -269,6 +324,36 @@ tenants' card volume for weeks.
 
 Set a data-usage alert well below 10 GB. Set per-zone bandwidth limits on the
 *primary* circuit too, so a guest streaming 4K does not starve the dispensary's POS.
+
+### Is SD-WAN a fit here?
+
+**No, and you do not need it.**
+
+SD-WAN in UniFi means **Site Magic** — a license-free feature in UniFi Site Manager
+that auto-builds IPsec tunnels **between UniFi gateways at different physical sites**,
+hub-and-spoke or mesh (20-site cap on mesh). The UDM Pro is supported as either hub or
+spoke; a hub needs a public IP, and gateways need firmware 4.1.3 or newer.
+
+That solves a multi-site problem. This is **one building with one gateway** — there is
+no second site to connect, so there is nothing for it to do.
+
+What SD-WAN sounds like it would give you — *the network intelligently picks the best
+path when the circuit degrades* — is **dual-WAN failover with per-network policy**.
+That is a native UDM Pro feature and it is already in this design, above. You do not
+need SD-WAN to get "POS fails over to 5G, guest does not." Worth being precise about,
+because SD-WAN sounds like the answer and is not.
+
+**Where it would genuinely apply:**
+
+- **If the dispensary is one of several stores.** Very common in this industry. Site
+  Magic would mesh this location to their others for shared back-office and
+  seed-to-sale access — and the bar's VLANs simply never enter the tunnel, which
+  reinforces the separation rather than weakening it. It is free with the gear already
+  bought. **Ask whether this is store #1 or store #4.**
+- **If they later add a second circuit** and want application-aware steering across
+  both. Even then, dual-WAN load balancing on the UDM Pro covers most of it.
+
+Build as designed. Revisit Site Magic the day a second location appears.
 
 **Test the failover before go-live** — unplug WAN1 and watch a card transaction
 complete on both sides, then confirm guest traffic did not ride along.
@@ -301,8 +386,11 @@ If a second circuit is at all affordable, **give the dispensary its own** and us
 - [x] ~~Order the **210 W AC adapter** for the Flex~~ — ordered (§0)
 - [ ] Order a 10G SFP+ DAC for the Flex → UDM Pro uplink (§0)
 - [ ] Order a rack UPS — the PDU is not one (§0)
-- [ ] Confirm whether the dispensary's existing cameras are PoE (§7)
-- [ ] Confirm state surveillance + retention requirements (§7)
+- [ ] Confirm whether the third-party NVR has built-in PoE ports (§7)
+- [ ] Get the camera vendor's required outbound endpoints (§7)
+- [ ] Ask whether the dispensary is a multi-location operator (§8)
+- [ ] Confirm state surveillance and retention requirements (§7)
+- [ ] Check the circuit's **upload** speed against camera cloud upload (§7)
 - [ ] Confirm who owns the circuit, the rack, and the UniFi console (§9)
 
 **Install**

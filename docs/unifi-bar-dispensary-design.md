@@ -149,10 +149,13 @@ to whoever owns the rack. See section 9.
 | 21 | DISP-BACK | 10.0.21.0/24 | Dispensary | Back office, vault-room PC |
 | 22 | DISP-CAM | 10.0.22.0/24 | Cameras | **Reserved, unused** — surveillance is on its own Cradlepoint, see §7 |
 | 30 | GUEST | 10.0.30.0/22 | Guest | Shared public Wi-Fi, both halves |
-| 31 | STAFF | 10.0.31.0/24 | Staff | Shared staff Wi-Fi — see section 5 |
+| 31 | STAFF | **10.0.40.0/24** | Staff | Shared staff Wi-Fi — see §5. Not 10.0.31.x: the guest /22 spans 10.0.30–33 |
 
 Give `GUEST` a **/22, not a /24**. A busy bar on a Friday will chew through 254
 addresses with phones that never disassociate. DHCP lease 2–4 hours so it recycles.
+
+That /22 spans `10.0.30.0`–`10.0.33.255`, which is why **STAFF sits at 10.0.40.0/24**
+rather than the 10.0.31.x its VLAN ID would suggest.
 
 ---
 

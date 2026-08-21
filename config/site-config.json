@@ -1,0 +1,170 @@
+{
+  "$comment": "Source of truth for the bar/dispensary UniFi build. Passphrases are NEVER stored here - each WLAN names an environment variable the provisioning script reads at runtime.",
+  "site": "default",
+  "gateway": "Dream Machine Pro",
+
+  "networks": [
+    {
+      "name": "MGMT",
+      "vlan": 1,
+      "subnet": "10.0.1.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.1.50", "stop": "10.0.1.200", "lease": 86400 },
+      "zone": "Mgmt",
+      "existing": true,
+      "note": "Default LAN. Re-address the existing network by hand rather than creating a duplicate."
+    },
+    {
+      "name": "BAR-POS",
+      "vlan": 10,
+      "subnet": "10.0.10.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.10.50", "stop": "10.0.10.200", "lease": 86400 },
+      "zone": "Bar",
+      "note": "POS terminals, KDS, card readers, receipt printers"
+    },
+    {
+      "name": "BAR-BACK",
+      "vlan": 11,
+      "subnet": "10.0.11.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.11.50", "stop": "10.0.11.200", "lease": 86400 },
+      "zone": "Bar",
+      "note": "Back-office PC, office printer, scheduling"
+    },
+    {
+      "name": "BAR-IOT",
+      "vlan": 12,
+      "subnet": "10.0.12.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.12.50", "stop": "10.0.12.200", "lease": 86400 },
+      "zone": "Bar",
+      "note": "TVs, digital menu boards, cooler sensors, music"
+    },
+    {
+      "name": "DISP-POS",
+      "vlan": 20,
+      "subnet": "10.0.20.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.20.50", "stop": "10.0.20.200", "lease": 86400 },
+      "zone": "Dispensary",
+      "note": "POS + seed-to-sale, ID scanners"
+    },
+    {
+      "name": "DISP-BACK",
+      "vlan": 21,
+      "subnet": "10.0.21.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.21.50", "stop": "10.0.21.200", "lease": 86400 },
+      "zone": "Dispensary",
+      "note": "Back office, vault-room PC"
+    },
+    {
+      "name": "DISP-CAM",
+      "vlan": 22,
+      "subnet": "10.0.22.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.22.50", "stop": "10.0.22.200", "lease": 86400 },
+      "zone": "Cameras",
+      "note": "Reserved and unused - surveillance lives on its own Cradlepoint. Built now so the policy exists if it ever moves onto this circuit."
+    },
+    {
+      "name": "GUEST",
+      "vlan": 30,
+      "subnet": "10.0.30.1/22",
+      "purpose": "guest",
+      "dhcp": { "start": "10.0.30.10", "stop": "10.0.33.250", "lease": 14400 },
+      "zone": "Guest",
+      "note": "/22 spans 10.0.30.0-10.0.33.255. Short lease so a busy Friday recycles addresses."
+    },
+    {
+      "name": "STAFF",
+      "vlan": 31,
+      "subnet": "10.0.40.1/24",
+      "purpose": "corporate",
+      "dhcp": { "start": "10.0.40.50", "stop": "10.0.40.200", "lease": 86400 },
+      "zone": "Staff",
+      "note": "10.0.40.x, NOT 10.0.31.x - the guest /22 swallows 10.0.31.0/24. Fallback network if RADIUS dynamic VLAN is not used."
+    }
+  ],
+
+  "wlans": [
+    {
+      "name": "Venue Guest",
+      "network": "GUEST",
+      "security": "open",
+      "bands": ["2g", "5g"],
+      "hide_ssid": false,
+      "ap_group": "all",
+      "note": "Pair with a captive portal in Settings > Hotspot. Rename to the venue's actual name before applying."
+    },
+    {
+      "name": "Venue Staff",
+      "network": "STAFF",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_STAFF_PSK",
+      "bands": ["5g", "6g"],
+      "hide_ssid": false,
+      "ap_group": "all",
+      "note": "PSK fallback only. The design calls for WPA-Enterprise with dynamic VLAN - build that in the UI, see docs section 5."
+    },
+    {
+      "name": "BAR-POS",
+      "network": "BAR-POS",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_BARPOS_PSK",
+      "bands": ["5g"],
+      "hide_ssid": true,
+      "ap_group": "bar",
+      "note": "Handhelds and tablets only. Wire fixed terminals."
+    },
+    {
+      "name": "DISP-POS",
+      "network": "DISP-POS",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_DISPPOS_PSK",
+      "bands": ["5g"],
+      "hide_ssid": true,
+      "ap_group": "dispensary",
+      "note": "Handhelds and tablets only. Wire fixed terminals."
+    }
+  ],
+
+  "firewall_zones": {
+    "Mgmt": ["MGMT"],
+    "Bar": ["BAR-POS", "BAR-BACK", "BAR-IOT"],
+    "Dispensary": ["DISP-POS", "DISP-BACK"],
+    "Cameras": ["DISP-CAM"],
+    "Guest": ["GUEST"],
+    "Staff": ["STAFF"]
+  },
+
+  "firewall_policies": [
+    { "from": "Bar",           "to": "Dispensary",  "action": "block", "why": "The entire point of the build" },
+    { "from": "Dispensary",    "to": "Bar",         "action": "block", "why": "Both directions, written explicitly" },
+    { "from": "Guest",         "to": "*internal*",  "action": "block", "why": "Plus client isolation on the SSID itself" },
+    { "from": "Guest",         "to": "External",    "action": "allow", "why": "Rate-limited via traffic rules" },
+    { "from": "Staff",         "to": "Bar",         "action": "block", "why": "Staff phones never touch card networks" },
+    { "from": "Staff",         "to": "Dispensary",  "action": "block", "why": "Same" },
+    { "from": "Staff",         "to": "External",    "action": "allow", "why": "" },
+    { "from": "Cameras",       "to": "*any*",       "action": "block", "why": "Dormant today; policy ready if the system moves onto this circuit" },
+    { "from": "Cameras",       "to": "External",    "action": "block", "why": "Same" },
+    { "from": "Guest",         "to": "Mgmt",        "action": "block", "why": "No exceptions" },
+    { "from": "Staff",         "to": "Mgmt",        "action": "block", "why": "No exceptions" },
+    { "from": "Bar",           "to": "Mgmt",        "action": "block", "why": "Admin reaches Mgmt from a jump host only" },
+    { "from": "Dispensary",    "to": "Mgmt",        "action": "block", "why": "Same" }
+  ],
+
+  "manual_steps": [
+    "Zone-based firewall: create the zones above, then the policies, default-deny between zones first",
+    "RADIUS + dynamic VLAN for the staff SSID (bar accounts -> VLAN 11, dispensary -> VLAN 21)",
+    "AP Groups 'bar' (3 APs) and 'dispensary' (2 APs) before applying the POS WLANs",
+    "DHCP guard with trusted server addresses on every network",
+    "5G Backup failover scoping - POS allowed, guest excluded, alert under 10 GB",
+    "RF tuning pass: 5 GHz at 40 MHz, min RSSI -72, low data rates disabled, TX power medium",
+    "Per-zone bandwidth limits on the primary WAN"
+  ]
+}

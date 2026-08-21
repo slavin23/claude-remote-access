@@ -253,6 +253,33 @@ footer{
   .fact{flex:1 1 140px;padding-right:16px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- blocker panel ---- */
+.blocker{
+  margin:38px 0 0;border:1px solid var(--alert);border-radius:8px;
+  background:var(--surface);box-shadow:var(--shadow);overflow:hidden;
+}
+.blocker-hd{
+  background:var(--alert-soft);border-bottom:1px solid var(--alert);
+  padding:18px 24px;
+}
+.blocker-hd .kicker{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--alert);margin:0 0 8px;
+}
+.blocker-hd h2{margin:0;font-size:clamp(1.25rem,3vw,1.6rem)}
+.blocker-bd{padding:22px 24px}
+.blocker-bd p{margin-bottom:14px}
+.blocker-bd > *:last-child{margin-bottom:0}
+.nopoe{list-style:none;padding:0;margin:0 0 18px;max-width:none;display:grid;gap:1px;
+  background:var(--rule-soft);border:1px solid var(--rule-soft);border-radius:6px;overflow:hidden}
+.nopoe li{
+  margin:0;padding:11px 16px;background:var(--surface);
+  display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;
+  font-family:Archivo,sans-serif;font-size:.87rem;color:var(--ink-2);
+}
+.nopoe li::marker{content:none}
+.nopoe b{color:var(--ink);font-weight:600;min-width:190px}
 </style>
 
 <div class="wrap">
@@ -261,15 +288,48 @@ footer{
   <p class="eyebrow">Network design · two tenants, one building</p>
   <h1>Split-Building UniFi Build</h1>
   <p class="dek">A bar/restaurant on one half, a dispensary on the other. Two independent
-  businesses, one ISP circuit, one Dream Machine — and a shared guest and staff SSID
+  businesses, one ISP circuit, one Dream Machine Pro — and a shared guest and staff SSID
   that must not become a shared network.</p>
 
   <dl class="facts">
+    <div class="fact"><dt>Gateway</dt><dd>Dream Machine Pro</dd></div>
     <div class="fact"><dt>Access points</dt><dd>5 × U7 Pro XG</dd></div>
-    <div class="fact"><dt>Gateway</dt><dd>Dream Machine <span style="color:var(--ink-3);font-weight:500">(model TBC)</span></dd></div>
-    <div class="fact"><dt>Switching</dt><dd>2 × Flex 2.5G PoE</dd></div>
-    <div class="fact"><dt>WAN</dt><dd>1 circuit + 5G Backup</dd></div>
+    <div class="fact"><dt>Switching</dt><dd>Flex 2.5G PoE + 2 × Switch 24</dd></div>
+    <div class="fact"><dt>WAN</dt><dd>1 circuit + 5G Backup, 10 GB</dd></div>
   </dl>
+
+  <div class="blocker">
+    <div class="blocker-hd">
+      <p class="kicker">Blocker · read before install day</p>
+      <h2>The order as placed will not power on</h2>
+    </div>
+    <div class="blocker-bd">
+      <p><strong>The Flex 2.5G PoE is the only PoE source in the entire order, and nothing
+      in the order can power it.</strong></p>
+
+      <ul class="nopoe">
+        <li><b>Dream Machine Pro</b><span>no PoE output</span></li>
+        <li><b>Switch 24 (USW-24) × 2</b><span>no PoE output — 24 × 1 GbE + 2 × 1G SFP uplink</span></li>
+        <li><b>Power Distribution Pro</b><span>rack PDU — 16 switched AC outlets. No PoE, and not a UPS</span></li>
+        <li><b>Flex 2.5G PoE</b><span>AC power adapter sold separately</span></li>
+      </ul>
+
+      <p>Out of the box the Flex is designed to be powered over its uplink. There is no PoE
+      source in this order to do that — and even if there were, a PoE+ input caps the whole
+      switch budget at 16 W, which is not enough for a single access point.</p>
+
+      <h3 style="margin-top:26px">Order before install day</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Item</th><th>Approx.</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr class="t-sys"><td>AC Adapter 210 W</td><td class="mono">$79</td><td><strong>Mandatory.</strong> Unlocks the Flex's 196 W PoE budget. Without it nothing gets powered</td></tr>
+          <tr class="t-open"><td>10G SFP+ DAC</td><td class="mono">~$15–30</td><td>Flex → UDM Pro 10G SFP+ LAN. Without it the Flex uplinks at 1 GbE</td></tr>
+          <tr class="t-open"><td>Rack UPS</td><td class="mono">varies</td><td>The PDU is remote-reboot, not battery. A blip drops both tenants' POS mid-transaction</td></tr>
+          <tr class="t-open"><td>3.5" HDD</td><td class="mono">optional</td><td>Only if UniFi Protect gets added to the UDM Pro later</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
 </header>
 
 <!-- 1 -->
@@ -277,87 +337,63 @@ footer{
   <div class="num">§&thinsp;01</div>
   <div class="body">
     <h2>Hardware and PoE budget</h2>
-    <p class="sub">The switch choice decides this section. Read the power table before ordering.</p>
+    <p class="sub">Every watt of PoE on this site lands on one eight-port switch.</p>
 
     <div class="scroll"><table>
       <thead><tr><th>Qty</th><th>Device</th><th>What matters</th></tr></thead>
       <tbody>
-        <tr class="t-sys"><td>5</td><td>UniFi U7 Pro XG</td><td class="mono">10 GbE RJ45 uplink · PoE+ (802.3at) · 22 W max · WiFi 7 tri-band</td></tr>
-        <tr class="t-sys"><td>1</td><td>Dream Machine</td><td class="mono">Gateway + controller — model still needed, see below</td></tr>
-        <tr class="t-sys"><td>2</td><td>Flex 2.5G PoE</td><td class="mono">8 × 2.5 GbE PoE++ out · 10 GbE RJ45 + 10G SFP+ uplink · 60 Gbps</td></tr>
-        <tr class="t-sys"><td>1</td><td>UniFi 5G Backup</td><td class="mono">PoE-powered · RedCap · ~30–85 Mbps real world</td></tr>
+        <tr class="t-sys"><td>1</td><td>Dream Machine Pro</td><td class="mono">1 GbE + 10G SFP+ WAN · 8 × 1 GbE LAN + 1 × 10G SFP+ LAN · 3.5" bay · no PoE</td></tr>
+        <tr class="t-sys"><td>1</td><td>Flex 2.5G PoE</td><td class="mono">8 × 2.5 GbE PoE++ out · 10 GbE RJ45 + 10G SFP+ uplink · 60 Gbps</td></tr>
+        <tr class="t-sys"><td>2</td><td>Switch 24 (USW-24)</td><td class="mono">24 × 1 GbE, no PoE · 2 × 1G SFP uplink</td></tr>
+        <tr class="t-sys"><td>5</td><td>U7 Pro XG</td><td class="mono">10 GbE uplink · PoE+ (802.3at) · 22 W max · WiFi 7 tri-band</td></tr>
+        <tr class="t-sys"><td>1</td><td>Power Distribution Pro</td><td class="mono">16 switched AC outlets · rack power control · not a UPS</td></tr>
+        <tr class="t-sys"><td>1</td><td>5G Backup + 10 GB eSIM</td><td class="mono">PoE-powered · RedCap · ~30–85 Mbps</td></tr>
       </tbody>
     </table></div>
 
-    <h3>The Flex 2.5G's PoE budget depends entirely on how you power it</h3>
-    <p>This is the single most important line item in the build.</p>
+    <h3>PoE load — all of it on the Flex</h3>
+<pre>5 × U7 Pro XG @ 22 W      <b>110 W</b>
+1 × UniFi 5G Backup        <b>~15 W</b>
+────────────────────────────────
+Total                     <b>125 W</b></pre>
 
     <div class="scroll"><table>
-      <thead><tr><th>Power input</th><th>Total PoE</th><th>U7 Pro XG it can run</th></tr></thead>
+      <thead><tr><th>Flex power input</th><th>Budget</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr class="t-sys"><td>210 W AC adapter</td><td class="mono">196 W</td><td>8 — port-limited before power-limited</td></tr>
-        <tr class="t-open"><td>PoE+++ on uplink</td><td class="mono">76 W</td><td>3, with no headroom</td></tr>
-        <tr class="t-open"><td>PoE++ on uplink</td><td class="mono">46 W</td><td>2</td></tr>
-        <tr class="t-open"><td>PoE+ on uplink</td><td class="mono">16 W</td><td><span class="tag block">None</span></td></tr>
+        <tr class="t-sys"><td>210 W AC adapter</td><td class="mono">196 W</td><td><span class="tag allow">Works</span> 71 W headroom</td></tr>
+        <tr class="t-open"><td>PoE+++ on uplink</td><td class="mono">76 W</td><td><span class="tag block">Fails</span> 3 APs, nothing else</td></tr>
+        <tr class="t-open"><td>PoE++ on uplink</td><td class="mono">46 W</td><td><span class="tag block">Fails</span></td></tr>
+        <tr class="t-open"><td>PoE+ on uplink</td><td class="mono">16 W</td><td><span class="tag block">Fails</span> not even one AP</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Port count — comfortable once powered</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Switch</th><th>Used</th><th>Spare</th></tr></thead>
+      <tbody>
+        <tr class="t-sys"><td>Flex 2.5G PoE (8)</td><td>5 APs + 5G Backup = 6</td><td class="mono">2</td></tr>
+        <tr class="t-bar"><td>Switch 24 — bar</td><td>POS, KDS, printers, TVs, office</td><td class="mono">plenty</td></tr>
+        <tr class="t-disp"><td>Switch 24 — dispensary</td><td>POS, ID scanners, office, NVR</td><td class="mono">plenty</td></tr>
+        <tr class="t-sys"><td>UDM Pro LAN</td><td>Flex on SFP+, 2 × Switch 24 on RJ45</td><td class="mono">6</td></tr>
       </tbody>
     </table></div>
 
     <div class="note warn">
-      <h4>Order this or the build fails quietly</h4>
-      <p>Buy the <strong>210 W AC power adapter for both switches</strong> — it is sold
-      separately. If either Flex ends up powered over its own uplink instead, the PoE
-      budget collapses and the symptom looks like flaky access points, not a power
-      problem. You will chase it for a day.</p>
-    </div>
-
-<pre>Bar switch      3 × U7 Pro XG          <b>66 W</b>    fine on AC adapter
-Dispensary      2 × U7 Pro XG           44 W
-                8 × camera (~8 W)       64 W
-                ─────────────────────────────
-                                       <b>108 W</b>    AC adapter required</pre>
-
-    <h3>Port count is the real constraint</h3>
-    <p>Eight access ports per switch does not cover this site.</p>
-
-    <div class="scroll"><table>
-      <thead><tr><th>Side</th><th>Devices</th><th>Ports needed</th></tr></thead>
-      <tbody>
-        <tr class="t-bar"><td>Bar</td><td>3 APs, 2–3 POS, KDS, receipt printer, office PC</td><td class="mono">8–9 <span class="tag block">Over</span></td></tr>
-        <tr class="t-disp"><td>Dispensary</td><td>2 APs, NVR, 2 POS, ID scanner, office PC, <em>8 cameras</em></td><td class="mono">~15 <span class="tag block">Over</span></td></tr>
-      </tbody>
-    </table></div>
-
-    <p>The bar side is full on day one with no spare port for a fix or an addition. The
-    dispensary side is roughly double its capacity the moment cameras are counted — and
-    the 5G Backup needs a port too.</p>
-
-    <div class="note">
-      <h4>Recommended fix</h4>
-      <p>Keep a Flex 2.5G PoE on the bar side, and put a <strong>24-port PoE switch on the
-      dispensary side</strong> to absorb the camera plant. That keeps "one switch per tenant"
-      true, which is what the lease-separation logic in §02 rests on. A third switch
-      dedicated to cameras is cheaper but leaves three boxes to maintain.</p>
+      <h4>Two consequences of the non-PoE Switch 24s</h4>
+      <p><strong>All five AP drops must home-run to the rack holding the Flex</strong> — it is
+      the only thing that can power them. Confirm no AP run exceeds 100 m from that rack.
+      In a building this size it will not, but measure before you pull cable.</p>
+      <p>And <strong>neither tenant has PoE at their own switch</strong>. VoIP phones, PoE
+      cameras, PoE scanners on either side have no power source. See §07 — this matters
+      for the dispensary specifically.</p>
     </div>
 
     <h3>The 10G uplink on the APs will not be used</h3>
     <p>The U7 Pro XG has a 10 GbE uplink; the Flex's access ports are 2.5 GbE, so the APs
     link at 2.5G. <strong>Do not chase this</strong> — 2.5G per AP is far more than a bar
-    will ever generate, and 10G-capable PoE+ access ports cost real money. But say it to
-    the client now rather than let them find it later: the XG premium is not being
-    realized on this switch.</p>
-
-    <p>Cat6 is fine at these run lengths (10G under 55 m); Cat6A if any run is long or
-    bundled tight. Every AP port needs <strong>802.3at (PoE+) or better</strong> — the Flex's
-    ports are PoE++, so that requirement is comfortably met.</p>
-
-    <div class="note warn">
-      <h4>Still open</h4>
-      <p>The <strong>Dream Machine model</strong> decides how the two switches uplink. Each Flex
-      has a 10 GbE RJ45 and a 10G SFP+ uplink, but a UDM Pro has only <em>one</em> 10G SFP+
-      LAN port — the second switch would land on a 1 GbE port and become the bottleneck
-      for that entire tenant.</p>
-    </div>
-
+    will ever generate. But say it to the client now rather than let them find it later:
+    the XG premium is not being realized on this switch. Cat6 is fine at these run
+    lengths; Cat6A only if a run is long or bundled tight.</p>
   </div>
 </section>
 
@@ -366,60 +402,76 @@ Dispensary      2 × U7 Pro XG           44 W
   <div class="num">§&thinsp;02</div>
   <div class="body">
     <h2>Topology</h2>
-    <p class="sub">One gateway, two tenant switches, a hard wall down the middle.</p>
+    <p class="sub">One powered rack in neutral space, one non-PoE switch per tenant.</p>
 
     <figure>
       <div class="diagram">
-      <svg viewBox="0 0 860 430" role="img" aria-label="Network topology: ISP feeds the Dream Machine, which has a 5G Backup on WAN2 and feeds a bar switch and a dispensary switch. Traffic between the bar and dispensary sides is blocked.">
-        <rect class="d-box" x="368" y="6" width="124" height="36" rx="4"/>
-        <text class="d-t" x="430" y="29" text-anchor="middle">ISP handoff</text>
-        <path class="d-line" d="M430 42 V 84"/>
+      <svg viewBox="0 0 860 452" role="img" aria-label="Topology: the ISP feeds the Dream Machine Pro in a neutral rack. The Flex 2.5G PoE switch, powered by its AC adapter, uplinks over 10G SFP+ and powers all five access points plus the 5G Backup. Two non-PoE Switch 24s, one per tenant, uplink at 1 GbE. Traffic between the bar and dispensary sides is blocked.">
+        <rect class="d-box" x="368" y="4" width="124" height="34" rx="4"/>
+        <text class="d-t" x="430" y="26" text-anchor="middle">ISP handoff</text>
+        <path class="d-line" d="M430 38 V 62"/>
+        <text class="d-s" x="440" y="56">WAN1 · 1 GbE</text>
 
-        <rect class="d-box-a" x="336" y="84" width="188" height="54" rx="4"/>
-        <text class="d-t" x="430" y="107" text-anchor="middle">Dream Machine</text>
-        <text class="d-s" x="430" y="124" text-anchor="middle">gateway + controller</text>
+        <rect x="150" y="62" width="560" height="176" rx="6" fill="none" stroke="var(--rule)" stroke-width="1" stroke-dasharray="4 4"/>
+        <text class="d-s" x="164" y="80">NEUTRAL RACK</text>
 
-        <path class="d-dash" d="M524 111 H 588"/>
-        <rect class="d-box" x="588" y="88" width="152" height="46" rx="4"/>
-        <text class="d-t" x="664" y="107" text-anchor="middle">5G Backup</text>
-        <text class="d-s" x="664" y="123" text-anchor="middle">WAN2 · PoE</text>
+        <rect class="d-box-a" x="336" y="90" width="188" height="46" rx="4"/>
+        <text class="d-t" x="430" y="112" text-anchor="middle">Dream Machine Pro</text>
+        <text class="d-s" x="430" y="127" text-anchor="middle">gateway + controller</text>
 
-        <path class="d-line" d="M430 138 V 172 M180 172 H 680 M180 172 V 202 M680 172 V 202"/>
+        <path class="d-line" d="M430 136 V 160"/>
+        <text class="d-s" x="440" y="154">10G SFP+ DAC</text>
 
-        <rect class="d-box-bar" x="90" y="202" width="180" height="48" rx="4"/>
-        <text class="d-t" x="180" y="221" text-anchor="middle">Flex 2.5G PoE</text>
-        <text class="d-s" x="180" y="238" text-anchor="middle">bar side · AC adapter</text>
+        <rect class="d-box-a" x="336" y="160" width="188" height="46" rx="4"/>
+        <text class="d-t" x="430" y="182" text-anchor="middle">Flex 2.5G PoE</text>
+        <text class="d-s" x="430" y="197" text-anchor="middle">210 W AC adapter</text>
 
-        <rect class="d-box-disp" x="590" y="202" width="180" height="48" rx="4"/>
-        <text class="d-t" x="680" y="221" text-anchor="middle">24-port PoE</text>
-        <text class="d-s" x="680" y="238" text-anchor="middle">dispensary · camera plant</text>
+        <path class="d-line" d="M336 183 H 258 M258 183 V 216 M524 183 H 602 M602 183 V 216"/>
+        <rect class="d-box" x="166" y="216" width="184" height="34" rx="4"/>
+        <text class="d-s" x="258" y="237" text-anchor="middle">5 × U7 Pro XG · PoE</text>
+        <rect class="d-box" x="512" y="216" width="180" height="34" rx="4"/>
+        <text class="d-s" x="602" y="237" text-anchor="middle">5G Backup · PoE</text>
 
-        <path class="d-line" d="M180 250 V 288 M680 250 V 288"/>
+        <path class="d-line" d="M430 206 V 268 M180 268 H 680 M180 268 V 296 M680 268 V 296"/>
+        <text class="d-s" x="292" y="264" text-anchor="middle">1 GbE</text>
+        <text class="d-s" x="568" y="264" text-anchor="middle">1 GbE</text>
 
-        <rect class="d-box" x="60" y="288" width="240" height="112" rx="4"/>
-        <text class="d-s" x="78" y="310">3 × U7 Pro XG</text>
-        <text class="d-s" x="78" y="331">Bar POS / KDS / card readers</text>
-        <text class="d-s" x="78" y="352">TVs, menu boards, sensors</text>
-        <text class="d-s" x="78" y="373">Back office</text>
+        <rect class="d-box-bar" x="90" y="296" width="180" height="46" rx="4"/>
+        <text class="d-t" x="180" y="316" text-anchor="middle">Switch 24 · BAR</text>
+        <text class="d-s" x="180" y="332" text-anchor="middle">no PoE · bar space</text>
 
-        <rect class="d-box" x="560" y="288" width="240" height="112" rx="4"/>
-        <text class="d-s" x="578" y="310">2 × U7 Pro XG</text>
-        <text class="d-s" x="578" y="331">POS + seed-to-sale</text>
-        <text class="d-s" x="578" y="352">NVR + cameras (isolated)</text>
-        <text class="d-s" x="578" y="373">Back office, vault drop</text>
+        <rect class="d-box-disp" x="590" y="296" width="180" height="46" rx="4"/>
+        <text class="d-t" x="680" y="316" text-anchor="middle">Switch 24 · DISP</text>
+        <text class="d-s" x="680" y="332" text-anchor="middle">no PoE · disp space</text>
 
-        <path class="d-bar-line" d="M430 268 V 412"/>
-        <text class="d-l" x="430" y="426" text-anchor="middle">Bar ⇄ Dispensary — blocked</text>
+        <path class="d-line" d="M180 342 V 366 M680 342 V 366"/>
+
+        <rect class="d-box" x="60" y="366" width="240" height="56" rx="4"/>
+        <text class="d-s" x="78" y="387">POS · KDS · printers</text>
+        <text class="d-s" x="78" y="407">TVs · menu boards · office</text>
+
+        <rect class="d-box" x="560" y="366" width="240" height="56" rx="4"/>
+        <text class="d-s" x="578" y="387">POS · seed-to-sale</text>
+        <text class="d-s" x="578" y="407">ID scanners · office · NVR</text>
+
+        <path class="d-bar-line" d="M430 284 V 434"/>
+        <text class="d-l" x="430" y="448" text-anchor="middle">Bar ⇄ Dispensary — blocked</text>
       </svg>
       </div>
-      <figcaption>The gateway and ISP demarc sit in neutral space; each tenant's switch sits in their own.</figcaption>
+      <figcaption>The Flex is the single point of PoE, so every AP drop terminates in the neutral rack.</figcaption>
     </figure>
 
     <div class="note">
       <h4>Physical rule</h4>
-      <p>Each tenant's switch lives in that tenant's own space, fed by that tenant's own
-      drops. If the lease changes hands, the cut is <strong>one uplink cable</strong>, not a
-      re-pull. If both switches must share an IDF, that IDF should be landlord space.</p>
+      <p>Each tenant's Switch 24 lives in that tenant's own space, fed by that tenant's own
+      drops. If the lease changes hands, the cut is <strong>one uplink cable</strong>.</p>
+    </div>
+
+    <div class="note warn">
+      <h4>The APs are unavoidably shared</h4>
+      <p>One PoE switch powers all five, and both tenants' SSIDs broadcast on all of them.
+      That is fine — separation happens at the VLAN and firewall layer, not the physical
+      one. But it does mean the AP infrastructure belongs to whoever owns the rack. See §09.</p>
     </div>
   </div>
 </section>
@@ -429,20 +481,20 @@ Dispensary      2 × U7 Pro XG           44 W
   <div class="num">§&thinsp;03</div>
   <div class="body">
     <h2>VLAN plan</h2>
-    <p class="sub">Colour rail marks the owning zone: bar, dispensary, cameras, shared.</p>
+    <p class="sub">Colour rail marks the owning zone: bar, dispensary, cameras, shared, system.</p>
 
     <div class="scroll"><table>
       <thead><tr><th>VLAN</th><th>Name</th><th>Subnet</th><th>Zone</th><th>Contents</th></tr></thead>
       <tbody>
-        <tr class="t-sys"><td>1</td><td>MGMT</td><td class="mono">10.0.1.0/24</td><td>Mgmt</td><td>Gateway, switches, APs, 5G Backup</td></tr>
+        <tr class="t-sys"><td>1</td><td>MGMT</td><td class="mono">10.0.1.0/24</td><td>Mgmt</td><td>UDM Pro, switches, APs, 5G Backup, PDU</td></tr>
         <tr class="t-bar"><td>10</td><td>BAR-POS</td><td class="mono">10.0.10.0/24</td><td>Bar</td><td>POS terminals, KDS, card readers, receipt printers</td></tr>
         <tr class="t-bar"><td>11</td><td>BAR-BACK</td><td class="mono">10.0.11.0/24</td><td>Bar</td><td>Back-office PC, office printer, scheduling</td></tr>
         <tr class="t-bar"><td>12</td><td>BAR-IOT</td><td class="mono">10.0.12.0/24</td><td>Bar</td><td>TVs, digital menu boards, cooler sensors, music</td></tr>
         <tr class="t-disp"><td>20</td><td>DISP-POS</td><td class="mono">10.0.20.0/24</td><td>Dispensary</td><td>POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners</td></tr>
         <tr class="t-disp"><td>21</td><td>DISP-BACK</td><td class="mono">10.0.21.0/24</td><td>Dispensary</td><td>Back office, vault-room PC</td></tr>
-        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td>NVR + cameras — fully isolated, see §07</td></tr>
+        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td>Existing/third-party surveillance — isolated, see §07</td></tr>
         <tr class="t-open"><td>30</td><td>GUEST</td><td class="mono">10.0.30.0/22</td><td>Guest</td><td>Shared public Wi-Fi, both halves</td></tr>
-        <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.31.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05 for the tenant split</td></tr>
+        <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.31.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05</td></tr>
       </tbody>
     </table></div>
 
@@ -467,9 +519,9 @@ Dispensary      2 × U7 Pro XG           44 W
         <tr class="t-open"><td>Guest</td><td>Any internal</td><td><span class="tag block">Block</span></td><td>Plus client isolation on the SSID itself</td></tr>
         <tr class="t-open"><td>Guest</td><td>Internet</td><td><span class="tag allow">Allow</span></td><td>Rate-limited — see §08</td></tr>
         <tr class="t-open"><td>Staff</td><td>Any POS</td><td><span class="tag block">Block</span></td><td>Staff phones never touch card networks</td></tr>
-        <tr class="t-cam"><td>Cameras</td><td>Any zone</td><td><span class="tag block">Block</span></td><td>Cameras talk to the NVR and nothing else</td></tr>
-        <tr class="t-cam"><td>Cameras</td><td>Internet</td><td><span class="tag block">Block</span></td><td>Only the NVR gets out, for updates and remote view</td></tr>
-        <tr class="t-disp"><td>Dispensary</td><td>NVR only, named ports</td><td><span class="tag allow">Allow</span></td><td>Licensee viewing</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Any zone</td><td><span class="tag block">Block</span></td><td>Surveillance talks to its recorder only</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Internet</td><td><span class="tag block">Block</span></td><td>Only the recorder gets out, if at all</td></tr>
+        <tr class="t-disp"><td>Dispensary</td><td>Recorder, named ports</td><td><span class="tag allow">Allow</span></td><td>Licensee viewing</td></tr>
         <tr class="t-open"><td>Guest / Staff</td><td>Mgmt</td><td><span class="tag block">Block</span></td><td>No exceptions</td></tr>
         <tr class="t-sys"><td>Admin device</td><td>Mgmt</td><td><span class="tag allow">Allow</span></td><td>Single jump host or admin VLAN</td></tr>
       </tbody>
@@ -497,14 +549,14 @@ Dispensary      2 × U7 Pro XG           44 W
       </tbody>
     </table></div>
 
-    <p><strong>Wire the POS wherever you physically can.</strong> Those two SSIDs exist for
-    handhelds and tablets, not for fixed terminals. Use AP Groups so each tenant's POS
-    SSID only broadcasts on their own half's APs.</p>
+    <p><strong>Wire the POS wherever you physically can</strong> — both Switch 24s have ports
+    to spare. Those two SSIDs exist for handhelds and tablets, not fixed terminals. Use
+    AP Groups so each tenant's POS SSID only broadcasts on their half's APs.</p>
 
     <h3>The shared staff SSID — do it with RADIUS</h3>
-    <p>One staff SSID across two unaffiliated businesses means, by default, bar staff
-    phones and dispensary staff phones in the same broadcast domain. Fix it with
-    <strong>dynamic VLAN assignment</strong>: WPA2/WPA3-Enterprise against the gateway's
+    <p>One staff SSID across two unaffiliated businesses puts bar staff phones and
+    dispensary staff phones in the same broadcast domain by default. Fix it with
+    <strong>dynamic VLAN assignment</strong>: WPA2/WPA3-Enterprise against the UDM Pro's
     built-in RADIUS server (or UniFi Identity), bar accounts returning VLAN 11 and
     dispensary accounts returning VLAN 21. Same SSID name, same login prompt, two
     completely separate networks behind it.</p>
@@ -516,8 +568,8 @@ Dispensary      2 × U7 Pro XG           44 W
       still safe. What you must not ship is a shared staff PSK with LAN access on both sides.</p>
     </div>
 
-    <p>A captive portal on the guest SSID is worth the setup here: it gives both tenants
-    a terms-of-use page, and the dispensary may want an age gate on the splash screen.</p>
+    <p>A captive portal on the guest SSID is worth the setup: it gives both tenants a
+    terms-of-use page, and the dispensary may want an age gate on the splash screen.</p>
   </div>
 </section>
 
@@ -530,8 +582,8 @@ Dispensary      2 × U7 Pro XG           44 W
 
     <ul>
       <li><strong>5 GHz channel width: 40 MHz.</strong> Not 80, not 160. Density beats headline speed.</li>
-      <li><strong>6 GHz: 160 MHz</strong> is fine — it is clean and short-range, which is exactly what you want here.</li>
-      <li><strong>Disable low data rates.</strong> 2.4 GHz minimum 12 Mbps, 5 GHz 12–24 Mbps. This is the single biggest fix for sticky clients hanging onto a distant AP.</li>
+      <li><strong>6 GHz: 160 MHz</strong> is fine — clean and short-range, exactly what you want here.</li>
+      <li><strong>Disable low data rates.</strong> 2.4 GHz minimum 12 Mbps, 5 GHz 12–24 Mbps. The single biggest fix for sticky clients hanging onto a distant AP.</li>
       <li><strong>Min RSSI</strong> on, around −72 dBm, so phones let go and re-roam.</li>
       <li><strong>Band steering</strong> on. <strong>802.11r</strong> on for the staff SSID but <em>off</em> on the POS SSIDs — older handheld POS gear roams badly with it.</li>
       <li><strong>Transmit power manual/medium</strong>, not auto-high. Five APs in one building at full power just talk over each other.</li>
@@ -540,8 +592,8 @@ Dispensary      2 × U7 Pro XG           44 W
     <div class="note bar">
       <h4>Bar-side RF hazards</h4>
       <p>Commercial microwaves (2.4 GHz obliteration), the metal back-bar, walk-in coolers,
-      and speaker/duct runs in the ceiling. Do not mount an AP above the back-bar or
-      inside ductwork.</p>
+      and ceiling duct and speaker runs. Do not mount an AP above the back-bar or inside
+      ductwork.</p>
     </div>
 
     <div class="note disp">
@@ -553,8 +605,8 @@ Dispensary      2 × U7 Pro XG           44 W
     <h3>Placement — 5 APs</h3>
     <p><strong>3 on the bar/restaurant side</strong> (dining floor, bar area, patio/entry) —
     that is where the client count is. <strong>2 on the dispensary side</strong> (sales floor
-    and queue, back-of-house). The Pro XG covers roughly 1,500 ft² each, but space them
-    for <em>capacity</em>, not coverage: overlapping cells at lower TX power.</p>
+    and queue, back-of-house). Each Pro XG covers roughly 1,500 ft², but space them for
+    <em>capacity</em>, not coverage: overlapping cells at lower TX power.</p>
   </div>
 </section>
 
@@ -562,28 +614,20 @@ Dispensary      2 × U7 Pro XG           44 W
 <section>
   <div class="num">§&thinsp;07</div>
   <div class="body">
-    <h2>Cameras and compliance</h2>
-    <p class="sub">Check the state rules before finalizing this section — they are prescriptive and they vary.</p>
+    <h2>Dispensary surveillance</h2>
+    <p class="sub">No cameras in this order — so the system is existing or third-party. Two things still apply.</p>
 
     <ul>
-      <li>Cameras on VLAN 22, isolated from everything — including the bar and the guest network.</li>
-      <li>Cameras themselves get <strong>no internet</strong>. Only the NVR does.</li>
-      <li>Most states mandate 24/7 recording with <strong>30–90 day retention</strong> at a specified minimum resolution and frame rate.</li>
+      <li><strong>It gets VLAN 22 and full isolation</strong> regardless of vendor. Recorder reachable only from DISP-BACK on named ports; cameras get no internet and no route to any other zone.</li>
+      <li><strong>The Switch 24 has no PoE.</strong> If that system's cameras are PoE — most are — the dispensary's switch cannot power them. They will need their own PoE switch or injectors.</li>
     </ul>
 
-<pre>8 cams @ 4 MP / 15 fps / H.265   ≈ 6–8 Mbps each
-
-  30 days   ≈  <b>~6 TB</b>
-  90 days   ≈ <b>~18 TB</b></pre>
-
-    <p>A Dream Machine's single drive bay will not do 90 days. Budget a UNVR or UNVR Pro
-    with proper surveillance drives.</p>
-
     <div class="note warn">
-      <h4>Watch for this one</h4>
-      <p>Many states require the surveillance system be accessible <strong>only to the
-      licensee</strong>. That is a direct argument against the bar's owner holding controller
-      credentials that can reach VLAN 22 — see §09.</p>
+      <h4>Find this out before install day, not on it</h4>
+      <p>Most states require the surveillance system be accessible <strong>only to the
+      licensee</strong>, with 30–90 day retention. That is a direct argument against the bar's
+      owner holding controller credentials that can reach VLAN 22 — see §09. Confirm the
+      state rules; they are prescriptive and they vary.</p>
     </div>
   </div>
 </section>
@@ -593,30 +637,32 @@ Dispensary      2 × U7 Pro XG           44 W
   <div class="num">§&thinsp;08</div>
   <div class="body">
     <h2>WAN and 5G failover</h2>
-    <p class="sub">The policy matters more than the hardware.</p>
+    <p class="sub">The 10 GB data pack turns failover scoping from a preference into a hard rule.</p>
 
-    <ul>
-      <li>The 5G Backup is PoE-powered off a switch port and configured as WAN2 in UniFi Network 10.</li>
-      <li><strong>If the gateway is a UDM Pro:</strong> its WAN2 (port 10) is SFP+ only. There is no RJ45 WAN2 — you designate a LAN port as WAN2 in the UI instead.</li>
-      <li><strong>Mount it for signal, not for tidiness</strong> — exterior wall or near a window, not buried in the IDF closet.</li>
-    </ul>
+    <p><strong>How it connects:</strong> the 5G Backup is PoE-powered from the Flex and adopted
+    as a managed UniFi device. It does <em>not</em> need the UDM Pro's WAN2 port — traffic is
+    carried over the LAN, so no SFP+ RJ45 module is required. Place it for <strong>signal</strong>,
+    not tidiness: exterior wall or near a window, not buried in the rack.</p>
 
-    <p>RedCap gives 30–85 Mbps. Scope failover so that during an outage:</p>
+    <p>RedCap gives 30–85 Mbps, and <strong>10 GB is roughly three hours of one person
+    streaming</strong>. POS traffic, by contrast, is kilobytes per transaction — 10 GB would
+    cover both tenants' card volume for weeks. So scope it deliberately:</p>
 
     <div class="scroll"><table>
       <thead><tr><th>Traffic</th><th>On 5G</th><th>Reasoning</th></tr></thead>
       <tbody>
         <tr class="t-bar"><td>Bar POS</td><td><span class="tag allow">Allow</span></td><td>Card transactions must complete</td></tr>
         <tr class="t-disp"><td>Dispensary POS + seed-to-sale</td><td><span class="tag allow">Allow</span></td><td>Compliance reporting cannot stall</td></tr>
-        <tr class="t-open"><td>Guest SSID</td><td><span class="tag block">Exclude</span></td><td>Will consume the entire backup link</td></tr>
-        <tr class="t-cam"><td>Camera cloud / remote view</td><td><span class="tag block">Exclude</span></td><td>Recording continues locally regardless</td></tr>
+        <tr class="t-open"><td>Staff Wi-Fi</td><td><span class="tag allow">Capped</span></td><td>Ops messaging only</td></tr>
+        <tr class="t-open"><td>Guest SSID</td><td><span class="tag block">Exclude</span></td><td>Would burn the entire data pack in an afternoon</td></tr>
+        <tr class="t-cam"><td>Surveillance remote view</td><td><span class="tag block">Exclude</span></td><td>Recording continues locally regardless</td></tr>
       </tbody>
     </table></div>
 
-    <p>Set per-zone bandwidth limits (Traffic Rules / smart queues) on the <em>primary</em>
-    circuit too, so a guest streaming 4K does not starve the dispensary's POS.
-    <strong>Test the failover before go-live</strong> — unplug the WAN and watch a card
-    transaction complete on both sides.</p>
+    <p>Set a data-usage alert well below 10 GB. Set per-zone bandwidth limits on the
+    <em>primary</em> circuit too, so a guest streaming 4K does not starve the dispensary's POS.
+    <strong>Test the failover before go-live</strong> — pull WAN1, watch a card transaction
+    complete on both sides, then confirm guest traffic did not ride along.</p>
   </div>
 </section>
 
@@ -637,20 +683,25 @@ Dispensary      2 × U7 Pro XG           44 W
       <h4>Two — shared console, shared visibility</h4>
       <p>Whoever owns the UniFi console can see and change the other tenant's network.
       UniFi does not do true per-VLAN tenant admin delegation — site admin is site admin.
-      No configuration fixes this. It needs an agreement, or a neutral third party (you)
-      holding the owner account with each tenant on a limited login.</p>
+      No configuration fixes this. It needs an agreement, or a neutral third party holding
+      the owner account with each tenant on a limited login.</p>
     </div>
 
     <div class="note warn">
-      <h4>Three — compliance may forbid the whole premise</h4>
-      <p>The dispensary's rules may not permit shared infrastructure for the camera or
-      seed-to-sale systems. Confirm against state regulation <em>early</em>. If it does not,
-      the answer is a second circuit and a second gateway, and this design collapses into
-      two independent sites that happen to share a building.</p>
+      <h4>Three — shared access points</h4>
+      <p>All five run off one PoE switch in one rack. The tenant who does not own that
+      rack is depending on the one who does for their Wi-Fi.</p>
+    </div>
+
+    <div class="note warn">
+      <h4>Four — compliance may forbid the premise</h4>
+      <p>The dispensary's rules may not permit shared infrastructure for surveillance or
+      seed-to-sale. Confirm against state regulation <em>early</em>. If it does not fly, the
+      answer is a second circuit and a second gateway.</p>
     </div>
 
     <p>If a second circuit is at all affordable, <strong>give the dispensary its own</strong> and
-    use the 5G Backup on the bar. It removes all three items in one move.</p>
+    use the 5G Backup on the bar.</p>
   </div>
 </section>
 
@@ -659,31 +710,44 @@ Dispensary      2 × U7 Pro XG           44 W
   <div class="num">§&thinsp;10</div>
   <div class="body">
     <h2>Build checklist</h2>
-    <p class="sub">Roughly in order. The three confirmations at the top gate everything below them.</p>
+    <p class="sub">The first group gates everything below it. Ticks are saved in this browser.</p>
 
+    <h3>Before install day</h3>
     <ul class="check">
-      <li><input type="checkbox" id="c1"><span><label for="c1">Order the 210 W AC adapter for every Flex 2.5G PoE switch</label> <span class="ref">§01</span></span></li>
-      <li><input type="checkbox" id="c1b"><span><label for="c1b">Resolve the port-count shortfall — 24-port PoE on the dispensary side</label> <span class="ref">§01</span></span></li>
-      <li><input type="checkbox" id="c1c"><span><label for="c1c">Confirm Dream Machine model, then plan both switch uplinks</label> <span class="ref">§01</span></span></li>
-      <li><input type="checkbox" id="c2"><span><label for="c2">Confirm state camera retention + isolation requirements</label> <span class="ref">§07</span></span></li>
-      <li><input type="checkbox" id="c3"><span><label for="c3">Confirm who owns the circuit and the UniFi console</label> <span class="ref">§09</span></span></li>
-      <li><input type="checkbox" id="c4"><span><label for="c4">Cat6/6A to 5 AP locations, both switch locations, NVR, POS drops</label> <span class="ref">§01</span></span></li>
-      <li><input type="checkbox" id="c5"><span><label for="c5">Create VLANs and zones, default-deny between tenants first</label> <span class="ref">§03–04</span></span></li>
-      <li><input type="checkbox" id="c6"><span><label for="c6">Verify Bar ⇄ Dispensary block from both directions with a real ping test</label> <span class="ref">§04</span></span></li>
-      <li><input type="checkbox" id="c7"><span><label for="c7">Stand up RADIUS + dynamic VLAN for the staff SSID</label> <span class="ref">§05</span></span></li>
-      <li><input type="checkbox" id="c8"><span><label for="c8">RF tuning pass — after furniture is in, not before</label> <span class="ref">§06</span></span></li>
-      <li><input type="checkbox" id="c9"><span><label for="c9">Walk test on a phone with WiFiman, both halves</label> <span class="ref">§06</span></span></li>
-      <li><input type="checkbox" id="c10"><span><label for="c10">Configure and test 5G failover with guest excluded</label> <span class="ref">§08</span></span></li>
-      <li><input type="checkbox" id="c11"><span><label for="c11">Enable auto-backup, set admin accounts, disable unused remote access</label> <span class="ref">§09</span></span></li>
-      <li><input type="checkbox" id="c12"><span><label for="c12">Run a live card transaction on both sides, on primary and on failover</label> <span class="ref">§08</span></span></li>
+      <li><input type="checkbox" id="a1"><span><label for="a1">Order the <b>210 W AC adapter</b> for the Flex — nothing powers on without it</label> <span class="ref">§00</span></span></li>
+      <li><input type="checkbox" id="a2"><span><label for="a2">Order a 10G SFP+ DAC for the Flex → UDM Pro uplink</label> <span class="ref">§00</span></span></li>
+      <li><input type="checkbox" id="a3"><span><label for="a3">Order a rack UPS — the PDU is not one</label> <span class="ref">§00</span></span></li>
+      <li><input type="checkbox" id="a4"><span><label for="a4">Confirm whether the dispensary's existing cameras are PoE</label> <span class="ref">§07</span></span></li>
+      <li><input type="checkbox" id="a5"><span><label for="a5">Confirm state surveillance and retention requirements</label> <span class="ref">§07</span></span></li>
+      <li><input type="checkbox" id="a6"><span><label for="a6">Confirm who owns the circuit, the rack, and the UniFi console</label> <span class="ref">§09</span></span></li>
+    </ul>
+
+    <h3>Install</h3>
+    <ul class="check">
+      <li><input type="checkbox" id="b1"><span><label for="b1">Measure AP runs from the rack — all five must be under 100 m</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="b2"><span><label for="b2">Cat6/6A to 5 AP locations, both tenant switch locations, POS drops</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="b3"><span><label for="b3">Rack: UDM Pro, Flex + adapter, PDU, UPS</label> <span class="ref">§02</span></span></li>
+      <li><input type="checkbox" id="b4"><span><label for="b4">Create VLANs and zones, default-deny between tenants first</label> <span class="ref">§03–04</span></span></li>
+      <li><input type="checkbox" id="b5"><span><label for="b5">Verify Bar ⇄ Dispensary block from both directions with a real ping test</label> <span class="ref">§04</span></span></li>
+      <li><input type="checkbox" id="b6"><span><label for="b6">Stand up RADIUS + dynamic VLAN for the staff SSID</label> <span class="ref">§05</span></span></li>
+      <li><input type="checkbox" id="b7"><span><label for="b7">RF tuning pass — after furniture is in, not before</label> <span class="ref">§06</span></span></li>
+      <li><input type="checkbox" id="b8"><span><label for="b8">Walk test on a phone with WiFiman, both halves</label> <span class="ref">§06</span></span></li>
+    </ul>
+
+    <h3>Before handover</h3>
+    <ul class="check">
+      <li><input type="checkbox" id="d1"><span><label for="d1">Configure failover with guest excluded, set a data alert under 10 GB</label> <span class="ref">§08</span></span></li>
+      <li><input type="checkbox" id="d2"><span><label for="d2">Test failover: pull WAN1, complete a card transaction on both sides</label> <span class="ref">§08</span></span></li>
+      <li><input type="checkbox" id="d3"><span><label for="d3">Enable auto-backup, set admin accounts, disable unused remote access</label> <span class="ref">§09</span></span></li>
+      <li><input type="checkbox" id="d4"><span><label for="d4">Label every port and drop at both ends</label></span></li>
     </ul>
   </div>
 </section>
 
 <footer>
-  <span>Design doc · revision 2</span>
-  <span>Specs verified against techspecs.ui.com</span>
-  <span>Open item: Dream Machine model</span>
+  <span>Design doc · revision 3</span>
+  <span>Built against the confirmed bill of materials</span>
+  <span>Specs verified at techspecs.ui.com</span>
 </footer>
 
 </div>

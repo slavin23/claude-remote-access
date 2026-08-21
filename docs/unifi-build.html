@@ -1,0 +1,652 @@
+<title>Split-Building UniFi Build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --bg:#EAEDEE;
+  --surface:#FDFDFC;
+  --surface-2:#F1F4F4;
+  --ink:#12181A;
+  --ink-2:#3D4A4E;
+  --ink-3:#6B787D;
+  --rule:#CFD7D9;
+  --rule-soft:#DFE5E6;
+  --accent:#0F5C63;
+  --accent-soft:#0F5C6316;
+  --bar:#A9561F;
+  --bar-soft:#A9561F14;
+  --disp:#3F6E44;
+  --disp-soft:#3F6E4414;
+  --cam:#6A4877;
+  --alert:#A5342A;
+  --alert-soft:#A5342A12;
+  --shadow:0 1px 2px #12181A0d, 0 8px 24px -14px #12181A2e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1214;
+    --surface:#141B1E;
+    --surface-2:#1A2326;
+    --ink:#E6ECEC;
+    --ink-2:#AEBCBF;
+    --ink-3:#7E8E92;
+    --rule:#2A3538;
+    --rule-soft:#212B2E;
+    --accent:#5FC6CE;
+    --accent-soft:#5FC6CE1a;
+    --bar:#E0955C;
+    --bar-soft:#E0955C1a;
+    --disp:#82BE87;
+    --disp-soft:#82BE871a;
+    --cam:#BC96CB;
+    --alert:#E58A7E;
+    --alert-soft:#E58A7E16;
+    --shadow:0 1px 2px #00000055, 0 10px 28px -16px #000000aa;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1214;
+  --surface:#141B1E;
+  --surface-2:#1A2326;
+  --ink:#E6ECEC;
+  --ink-2:#AEBCBF;
+  --ink-3:#7E8E92;
+  --rule:#2A3538;
+  --rule-soft:#212B2E;
+  --accent:#5FC6CE;
+  --accent-soft:#5FC6CE1a;
+  --bar:#E0955C;
+  --bar-soft:#E0955C1a;
+  --disp:#82BE87;
+  --disp-soft:#82BE871a;
+  --cam:#BC96CB;
+  --alert:#E58A7E;
+  --alert-soft:#E58A7E16;
+  --shadow:0 1px 2px #00000055, 0 10px 28px -16px #000000aa;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Literata,Georgia,serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+
+/* ---- masthead ---- */
+.mast{padding:56px 0 0}
+.eyebrow{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 18px;
+}
+h1{
+  font-family:Archivo,'Helvetica Neue',sans-serif;
+  font-weight:700;font-size:clamp(2.3rem,6.2vw,3.6rem);line-height:1.02;
+  letter-spacing:-.028em;margin:0;text-wrap:balance;
+}
+.dek{
+  font-size:1.09rem;color:var(--ink-2);max-width:62ch;margin:20px 0 0;
+}
+.facts{
+  display:flex;flex-wrap:wrap;gap:0;margin:34px 0 0;
+  border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+}
+.fact{
+  flex:1 1 168px;padding:16px 20px 16px 0;
+}
+.fact + .fact{padding-left:20px;border-left:1px solid var(--rule-soft)}
+.fact dt{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+  margin:0 0 5px;
+}
+.fact dd{
+  margin:0;font-family:Archivo,sans-serif;font-weight:600;font-size:.99rem;
+  line-height:1.35;color:var(--ink);
+}
+
+/* ---- section scaffolding ---- */
+section{
+  display:grid;grid-template-columns:64px minmax(0,1fr);gap:0 28px;
+  padding-top:56px;margin-top:44px;border-top:1px solid var(--rule-soft);
+}
+section:first-of-type{border-top:none}
+.num{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);
+  padding-top:.55em;
+}
+.body{min-width:0}
+h2{
+  font-family:Archivo,sans-serif;font-weight:700;
+  font-size:clamp(1.42rem,3.1vw,1.86rem);line-height:1.14;letter-spacing:-.02em;
+  margin:0 0 4px;text-wrap:balance;
+}
+.sub{color:var(--ink-3);font-size:.95rem;margin:0 0 26px}
+h3{
+  font-family:Archivo,sans-serif;font-weight:600;font-size:1.03rem;
+  letter-spacing:-.008em;margin:34px 0 10px;
+}
+p{margin:0 0 15px;max-width:66ch}
+ul{margin:0 0 15px;padding-left:1.15em;max-width:66ch}
+li{margin:0 0 8px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:500;color:var(--ink);background:var(--accent-soft);
+  padding:.06em .26em;border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+code{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.855em;
+  background:var(--surface-2);border:1px solid var(--rule-soft);
+  padding:.1em .34em;border-radius:3px;color:var(--ink-2);
+}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* ---- data tables ---- */
+.scroll{overflow-x:auto;margin:0 0 18px;border:1px solid var(--rule);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-family:Archivo,sans-serif;font-size:.86rem;
+  font-variant-numeric:tabular-nums;line-height:1.45}
+th{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:500;
+  color:var(--ink-3);text-align:left;padding:11px 14px;white-space:nowrap;
+  border-bottom:1px solid var(--rule);background:var(--surface-2);
+}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);color:var(--ink-2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.8rem;color:var(--ink-2)}
+
+/* tenant coding */
+.t-bar td:first-child{box-shadow:inset 3px 0 0 var(--bar)}
+.t-disp td:first-child{box-shadow:inset 3px 0 0 var(--disp)}
+.t-cam td:first-child{box-shadow:inset 3px 0 0 var(--cam)}
+.t-sys td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.t-open td:first-child{box-shadow:inset 3px 0 0 var(--ink-3)}
+
+.tag{
+  display:inline-block;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  padding:3px 7px;border-radius:3px;white-space:nowrap;
+}
+.tag.block{color:var(--alert);background:var(--alert-soft);border:1px solid var(--alert)}
+.tag.allow{color:var(--disp);background:var(--disp-soft);border:1px solid var(--disp)}
+
+/* ---- callouts ---- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0;padding:16px 20px;margin:0 0 20px;box-shadow:var(--shadow);
+}
+.note.warn{border-left-color:var(--alert)}
+.note.bar{border-left-color:var(--bar)}
+.note.disp{border-left-color:var(--disp)}
+.note h4{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px;
+}
+.note p:last-child,.note ul:last-child{margin-bottom:0}
+
+pre{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.79rem;line-height:1.7;
+  background:var(--surface-2);border:1px solid var(--rule);border-radius:6px;
+  padding:16px 18px;overflow-x:auto;margin:0 0 20px;color:var(--ink-2);
+}
+pre b{color:var(--ink);font-weight:700}
+
+/* ---- diagram ---- */
+figure{margin:0 0 22px}
+.diagram{
+  background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+  padding:20px;overflow-x:auto;box-shadow:var(--shadow);
+}
+.diagram svg{display:block;width:100%;min-width:640px;height:auto}
+.d-box{fill:var(--surface-2);stroke:var(--rule);stroke-width:1.25}
+.d-box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.d-box-bar{fill:var(--bar-soft);stroke:var(--bar);stroke-width:1.25}
+.d-box-disp{fill:var(--disp-soft);stroke:var(--disp);stroke-width:1.25}
+.d-line{stroke:var(--rule);stroke-width:1.5;fill:none}
+.d-dash{stroke:var(--ink-3);stroke-width:1.4;fill:none;stroke-dasharray:5 4}
+.d-bar-line{stroke:var(--alert);stroke-width:1.5;fill:none;stroke-dasharray:3 5}
+.d-t{font-family:Archivo,sans-serif;font-size:13px;font-weight:600;fill:var(--ink)}
+.d-s{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;fill:var(--ink-3)}
+.d-l{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;fill:var(--alert);font-weight:700}
+figcaption{font-size:.83rem;color:var(--ink-3);margin-top:10px;font-style:italic}
+
+/* ---- checklist ---- */
+.check{list-style:none;padding:0;margin:0;max-width:none;
+  border:1px solid var(--rule);border-radius:6px;background:var(--surface);overflow:hidden}
+.check li{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;
+  margin:0;padding:12px 18px;border-bottom:1px solid var(--rule-soft);
+  font-family:Archivo,sans-serif;font-size:.9rem;color:var(--ink-2);
+}
+.check li:last-child{border-bottom:none}
+.check li::marker{content:none}
+.check input{
+  appearance:none;width:15px;height:15px;margin:3px 0 0;flex:none;
+  border:1.5px solid var(--rule);border-radius:3px;background:var(--bg);cursor:pointer;
+}
+.check input:checked{background:var(--accent);border-color:var(--accent)}
+.check input:checked + span{color:var(--ink-3);text-decoration:line-through}
+.check .ref{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--ink-3)}
+
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule);
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;
+  letter-spacing:.06em;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:8px 20px;
+}
+
+@media (max-width:720px){
+  body{font-size:16px}
+  .wrap{padding:0 18px 72px}
+  .mast{padding-top:38px}
+  section{grid-template-columns:1fr;gap:0;padding-top:40px;margin-top:32px}
+  .num{padding:0 0 8px}
+  .fact + .fact{padding-left:0;border-left:none}
+  .fact{flex:1 1 140px;padding-right:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Network design · two tenants, one building</p>
+  <h1>Split-Building UniFi Build</h1>
+  <p class="dek">A bar/restaurant on one half, a dispensary on the other. Two independent
+  businesses, one ISP circuit, one Dream Machine — and a shared guest and staff SSID
+  that must not become a shared network.</p>
+
+  <dl class="facts">
+    <div class="fact"><dt>Access points</dt><dd>5 × U7 Pro XG</dd></div>
+    <div class="fact"><dt>Gateway</dt><dd>Dream Machine <span style="color:var(--ink-3);font-weight:500">(model TBC)</span></dd></div>
+    <div class="fact"><dt>Switching</dt><dd>2 × UniFi <span style="color:var(--ink-3);font-weight:500">(models TBC)</span></dd></div>
+    <div class="fact"><dt>WAN</dt><dd>1 circuit + 5G Backup</dd></div>
+  </dl>
+</header>
+
+<!-- 1 -->
+<section>
+  <div class="num">§&thinsp;01</div>
+  <div class="body">
+    <h2>Hardware and PoE budget</h2>
+    <p class="sub">Confirm this before anything gets ordered or racked.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>Qty</th><th>Device</th><th>What matters</th></tr></thead>
+      <tbody>
+        <tr class="t-sys"><td>5</td><td>UniFi U7 Pro XG</td><td class="mono">10 GbE RJ45 uplink · PoE+ (802.3at) · 22 W max · WiFi 7 tri-band</td></tr>
+        <tr class="t-sys"><td>1</td><td>Dream Machine</td><td class="mono">Gateway + controller — model determines PoE ports and NVR bay</td></tr>
+        <tr class="t-sys"><td>2</td><td>UniFi switch</td><td class="mono">One per tenant half — see budget below</td></tr>
+        <tr class="t-sys"><td>1</td><td>UniFi 5G Backup</td><td class="mono">PoE-powered · RedCap · ~30–85 Mbps real world</td></tr>
+      </tbody>
+    </table></div>
+
+<pre>5 × U7 Pro XG        <b>110 W</b>   22 W each, PoE+ / 802.3at
+1 × UniFi 5G Backup   <b>~15 W</b>
+Dispensary cameras    <b>~64 W</b>   8 × ~8 W, if PoE — see §07
+─────────────────────────────────
+Working total        <b>~190 W</b>   across two switches</pre>
+
+    <div class="note warn">
+      <h4>The one that bites</h4>
+      <p>Every AP port must be <strong>802.3at (PoE+), not af</strong>. A 15.4 W-per-port
+      af switch will brown these out under load, and the symptom looks like a flaky
+      AP rather than a power problem.</p>
+    </div>
+
+    <h3>Port speed</h3>
+    <p>The Pro XG's uplink is 10 GbE. You will not see 10 Gbps of real client traffic in
+    a bar — 2.5 GbE per AP is genuinely enough — but if the client paid for XG, a switch
+    with multi-gig PoE+ ports is where that money goes. Cat6 handles 10G at these run
+    lengths (under 55 m); Cat6A if any run is long or bundled tight.</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section>
+  <div class="num">§&thinsp;02</div>
+  <div class="body">
+    <h2>Topology</h2>
+    <p class="sub">One gateway, two tenant switches, a hard wall down the middle.</p>
+
+    <figure>
+      <div class="diagram">
+      <svg viewBox="0 0 860 430" role="img" aria-label="Network topology: ISP feeds the Dream Machine, which has a 5G Backup on WAN2 and feeds a bar switch and a dispensary switch. Traffic between the bar and dispensary sides is blocked.">
+        <rect class="d-box" x="368" y="6" width="124" height="36" rx="4"/>
+        <text class="d-t" x="430" y="29" text-anchor="middle">ISP handoff</text>
+        <path class="d-line" d="M430 42 V 84"/>
+
+        <rect class="d-box-a" x="336" y="84" width="188" height="54" rx="4"/>
+        <text class="d-t" x="430" y="107" text-anchor="middle">Dream Machine</text>
+        <text class="d-s" x="430" y="124" text-anchor="middle">gateway + controller</text>
+
+        <path class="d-dash" d="M524 111 H 588"/>
+        <rect class="d-box" x="588" y="88" width="152" height="46" rx="4"/>
+        <text class="d-t" x="664" y="107" text-anchor="middle">5G Backup</text>
+        <text class="d-s" x="664" y="123" text-anchor="middle">WAN2 · PoE</text>
+
+        <path class="d-line" d="M430 138 V 172 M180 172 H 680 M180 172 V 202 M680 172 V 202"/>
+
+        <rect class="d-box-bar" x="90" y="202" width="180" height="48" rx="4"/>
+        <text class="d-t" x="180" y="223" text-anchor="middle">SW · BAR</text>
+        <text class="d-s" x="180" y="239" text-anchor="middle">bar-side space</text>
+
+        <rect class="d-box-disp" x="590" y="202" width="180" height="48" rx="4"/>
+        <text class="d-t" x="680" y="223" text-anchor="middle">SW · DISPENSARY</text>
+        <text class="d-s" x="680" y="239" text-anchor="middle">dispensary space</text>
+
+        <path class="d-line" d="M180 250 V 288 M680 250 V 288"/>
+
+        <rect class="d-box" x="60" y="288" width="240" height="112" rx="4"/>
+        <text class="d-s" x="78" y="310">3 × U7 Pro XG</text>
+        <text class="d-s" x="78" y="331">Bar POS / KDS / card readers</text>
+        <text class="d-s" x="78" y="352">TVs, menu boards, sensors</text>
+        <text class="d-s" x="78" y="373">Back office</text>
+
+        <rect class="d-box" x="560" y="288" width="240" height="112" rx="4"/>
+        <text class="d-s" x="578" y="310">2 × U7 Pro XG</text>
+        <text class="d-s" x="578" y="331">POS + seed-to-sale</text>
+        <text class="d-s" x="578" y="352">NVR + cameras (isolated)</text>
+        <text class="d-s" x="578" y="373">Back office, vault drop</text>
+
+        <path class="d-bar-line" d="M430 268 V 412"/>
+        <text class="d-l" x="430" y="426" text-anchor="middle">Bar ⇄ Dispensary — blocked</text>
+      </svg>
+      </div>
+      <figcaption>The gateway and ISP demarc sit in neutral space; each tenant's switch sits in their own.</figcaption>
+    </figure>
+
+    <div class="note">
+      <h4>Physical rule</h4>
+      <p>Each tenant's switch lives in that tenant's own space, fed by that tenant's own
+      drops. If the lease changes hands, the cut is <strong>one uplink cable</strong>, not a
+      re-pull. If both switches must share an IDF, that IDF should be landlord space.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <div class="num">§&thinsp;03</div>
+  <div class="body">
+    <h2>VLAN plan</h2>
+    <p class="sub">Colour rail marks the owning zone: bar, dispensary, cameras, shared.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>VLAN</th><th>Name</th><th>Subnet</th><th>Zone</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr class="t-sys"><td>1</td><td>MGMT</td><td class="mono">10.0.1.0/24</td><td>Mgmt</td><td>Gateway, switches, APs, 5G Backup</td></tr>
+        <tr class="t-bar"><td>10</td><td>BAR-POS</td><td class="mono">10.0.10.0/24</td><td>Bar</td><td>POS terminals, KDS, card readers, receipt printers</td></tr>
+        <tr class="t-bar"><td>11</td><td>BAR-BACK</td><td class="mono">10.0.11.0/24</td><td>Bar</td><td>Back-office PC, office printer, scheduling</td></tr>
+        <tr class="t-bar"><td>12</td><td>BAR-IOT</td><td class="mono">10.0.12.0/24</td><td>Bar</td><td>TVs, digital menu boards, cooler sensors, music</td></tr>
+        <tr class="t-disp"><td>20</td><td>DISP-POS</td><td class="mono">10.0.20.0/24</td><td>Dispensary</td><td>POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners</td></tr>
+        <tr class="t-disp"><td>21</td><td>DISP-BACK</td><td class="mono">10.0.21.0/24</td><td>Dispensary</td><td>Back office, vault-room PC</td></tr>
+        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td>NVR + cameras — fully isolated, see §07</td></tr>
+        <tr class="t-open"><td>30</td><td>GUEST</td><td class="mono">10.0.30.0/22</td><td>Guest</td><td>Shared public Wi-Fi, both halves</td></tr>
+        <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.31.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05 for the tenant split</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>Give <code>GUEST</code> a <strong>/22, not a /24</strong>. A busy bar on a Friday will chew
+    through 254 addresses with phones that never disassociate. Set the DHCP lease to
+    2–4 hours so it recycles.</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section>
+  <div class="num">§&thinsp;04</div>
+  <div class="body">
+    <h2>Firewall</h2>
+    <p class="sub">Zone-based policy, UniFi Network 9+. Start default-deny between zones, open only what breaks.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>From</th><th>To</th><th>Action</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr class="t-bar"><td>Bar</td><td>Dispensary</td><td><span class="tag block">Block</span></td><td>This is the entire point of the build</td></tr>
+        <tr class="t-disp"><td>Dispensary</td><td>Bar</td><td><span class="tag block">Block</span></td><td>Both directions, written explicitly</td></tr>
+        <tr class="t-open"><td>Guest</td><td>Any internal</td><td><span class="tag block">Block</span></td><td>Plus client isolation on the SSID itself</td></tr>
+        <tr class="t-open"><td>Guest</td><td>Internet</td><td><span class="tag allow">Allow</span></td><td>Rate-limited — see §08</td></tr>
+        <tr class="t-open"><td>Staff</td><td>Any POS</td><td><span class="tag block">Block</span></td><td>Staff phones never touch card networks</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Any zone</td><td><span class="tag block">Block</span></td><td>Cameras talk to the NVR and nothing else</td></tr>
+        <tr class="t-cam"><td>Cameras</td><td>Internet</td><td><span class="tag block">Block</span></td><td>Only the NVR gets out, for updates and remote view</td></tr>
+        <tr class="t-disp"><td>Dispensary</td><td>NVR only, named ports</td><td><span class="tag allow">Allow</span></td><td>Licensee viewing</td></tr>
+        <tr class="t-open"><td>Guest / Staff</td><td>Mgmt</td><td><span class="tag block">Block</span></td><td>No exceptions</td></tr>
+        <tr class="t-sys"><td>Admin device</td><td>Mgmt</td><td><span class="tag allow">Allow</span></td><td>Single jump host or admin VLAN</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>Also enable <em>Block LAN to WLAN multicast/broadcast</em> everywhere except the
+    bar's TV VLAN, where Chromecast and AirPlay are deliberately wanted.</p>
+  </div>
+</section>
+
+<!-- 5 -->
+<section>
+  <div class="num">§&thinsp;05</div>
+  <div class="body">
+    <h2>SSIDs</h2>
+    <p class="sub">Four, and no more. Every extra SSID burns airtime on beacons — in a dense bar that is a real cost, not a theoretical one.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>SSID</th><th>Security</th><th>VLAN</th><th>Bands</th><th>AP group</th></tr></thead>
+      <tbody>
+        <tr class="t-open"><td>&lt;Venue&gt; Guest</td><td>Open + captive portal, or WPA2 w/ posted password</td><td class="mono">30</td><td class="mono">2.4 + 5</td><td>All 5</td></tr>
+        <tr class="t-open"><td>&lt;Venue&gt; Staff</td><td>WPA2/WPA3-Enterprise (RADIUS)</td><td class="mono">dynamic</td><td class="mono">5 + 6</td><td>All 5</td></tr>
+        <tr class="t-bar"><td>BAR-POS</td><td>WPA3-PSK, strong key, hidden</td><td class="mono">10</td><td class="mono">5 only</td><td>Bar APs</td></tr>
+        <tr class="t-disp"><td>DISP-POS</td><td>WPA3-PSK, strong key, hidden</td><td class="mono">20</td><td class="mono">5 only</td><td>Disp APs</td></tr>
+      </tbody>
+    </table></div>
+
+    <p><strong>Wire the POS wherever you physically can.</strong> Those two SSIDs exist for
+    handhelds and tablets, not for fixed terminals. Use AP Groups so each tenant's POS
+    SSID only broadcasts on their own half's APs.</p>
+
+    <h3>The shared staff SSID — do it with RADIUS</h3>
+    <p>One staff SSID across two unaffiliated businesses means, by default, bar staff
+    phones and dispensary staff phones in the same broadcast domain. Fix it with
+    <strong>dynamic VLAN assignment</strong>: WPA2/WPA3-Enterprise against the gateway's
+    built-in RADIUS server (or UniFi Identity), bar accounts returning VLAN 11 and
+    dispensary accounts returning VLAN 21. Same SSID name, same login prompt, two
+    completely separate networks behind it.</p>
+
+    <div class="note">
+      <h4>If RADIUS is more than the site will maintain</h4>
+      <p>One PSK, everyone lands on VLAN 31, and VLAN 31 gets <strong>internet only</strong> —
+      no POS, no printers, no file shares, nothing on either tenant's LAN. Less useful,
+      still safe. What you must not ship is a shared staff PSK with LAN access on both sides.</p>
+    </div>
+
+    <p>A captive portal on the guest SSID is worth the setup here: it gives both tenants
+    a terms-of-use page, and the dispensary may want an age gate on the splash screen.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section>
+  <div class="num">§&thinsp;06</div>
+  <div class="body">
+    <h2>RF tuning</h2>
+    <p class="sub">A restaurant is high-density and high-interference. Defaults will underperform.</p>
+
+    <ul>
+      <li><strong>5 GHz channel width: 40 MHz.</strong> Not 80, not 160. Density beats headline speed.</li>
+      <li><strong>6 GHz: 160 MHz</strong> is fine — it is clean and short-range, which is exactly what you want here.</li>
+      <li><strong>Disable low data rates.</strong> 2.4 GHz minimum 12 Mbps, 5 GHz 12–24 Mbps. This is the single biggest fix for sticky clients hanging onto a distant AP.</li>
+      <li><strong>Min RSSI</strong> on, around −72 dBm, so phones let go and re-roam.</li>
+      <li><strong>Band steering</strong> on. <strong>802.11r</strong> on for the staff SSID but <em>off</em> on the POS SSIDs — older handheld POS gear roams badly with it.</li>
+      <li><strong>Transmit power manual/medium</strong>, not auto-high. Five APs in one building at full power just talk over each other.</li>
+    </ul>
+
+    <div class="note bar">
+      <h4>Bar-side RF hazards</h4>
+      <p>Commercial microwaves (2.4 GHz obliteration), the metal back-bar, walk-in coolers,
+      and speaker/duct runs in the ceiling. Do not mount an AP above the back-bar or
+      inside ductwork.</p>
+    </div>
+
+    <div class="note disp">
+      <h4>Dispensary-side note</h4>
+      <p>The vault/safe room is usually concrete and steel. Assume no coverage inside it
+      and run a wired drop instead of fighting it.</p>
+    </div>
+
+    <h3>Placement — 5 APs</h3>
+    <p><strong>3 on the bar/restaurant side</strong> (dining floor, bar area, patio/entry) —
+    that is where the client count is. <strong>2 on the dispensary side</strong> (sales floor
+    and queue, back-of-house). The Pro XG covers roughly 1,500 ft² each, but space them
+    for <em>capacity</em>, not coverage: overlapping cells at lower TX power.</p>
+  </div>
+</section>
+
+<!-- 7 -->
+<section>
+  <div class="num">§&thinsp;07</div>
+  <div class="body">
+    <h2>Cameras and compliance</h2>
+    <p class="sub">Check the state rules before finalizing this section — they are prescriptive and they vary.</p>
+
+    <ul>
+      <li>Cameras on VLAN 22, isolated from everything — including the bar and the guest network.</li>
+      <li>Cameras themselves get <strong>no internet</strong>. Only the NVR does.</li>
+      <li>Most states mandate 24/7 recording with <strong>30–90 day retention</strong> at a specified minimum resolution and frame rate.</li>
+    </ul>
+
+<pre>8 cams @ 4 MP / 15 fps / H.265   ≈ 6–8 Mbps each
+
+  30 days   ≈  <b>~6 TB</b>
+  90 days   ≈ <b>~18 TB</b></pre>
+
+    <p>A Dream Machine's single drive bay will not do 90 days. Budget a UNVR or UNVR Pro
+    with proper surveillance drives.</p>
+
+    <div class="note warn">
+      <h4>Watch for this one</h4>
+      <p>Many states require the surveillance system be accessible <strong>only to the
+      licensee</strong>. That is a direct argument against the bar's owner holding controller
+      credentials that can reach VLAN 22 — see §09.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section>
+  <div class="num">§&thinsp;08</div>
+  <div class="body">
+    <h2>WAN and 5G failover</h2>
+    <p class="sub">The policy matters more than the hardware.</p>
+
+    <ul>
+      <li>The 5G Backup is PoE-powered off a switch port and configured as WAN2 in UniFi Network 10.</li>
+      <li><strong>If the gateway is a UDM Pro:</strong> its WAN2 (port 10) is SFP+ only. There is no RJ45 WAN2 — you designate a LAN port as WAN2 in the UI instead.</li>
+      <li><strong>Mount it for signal, not for tidiness</strong> — exterior wall or near a window, not buried in the IDF closet.</li>
+    </ul>
+
+    <p>RedCap gives 30–85 Mbps. Scope failover so that during an outage:</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>Traffic</th><th>On 5G</th><th>Reasoning</th></tr></thead>
+      <tbody>
+        <tr class="t-bar"><td>Bar POS</td><td><span class="tag allow">Allow</span></td><td>Card transactions must complete</td></tr>
+        <tr class="t-disp"><td>Dispensary POS + seed-to-sale</td><td><span class="tag allow">Allow</span></td><td>Compliance reporting cannot stall</td></tr>
+        <tr class="t-open"><td>Guest SSID</td><td><span class="tag block">Exclude</span></td><td>Will consume the entire backup link</td></tr>
+        <tr class="t-cam"><td>Camera cloud / remote view</td><td><span class="tag block">Exclude</span></td><td>Recording continues locally regardless</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>Set per-zone bandwidth limits (Traffic Rules / smart queues) on the <em>primary</em>
+    circuit too, so a guest streaming 4K does not starve the dispensary's POS.
+    <strong>Test the failover before go-live</strong> — unplug the WAN and watch a card
+    transaction complete on both sides.</p>
+  </div>
+</section>
+
+<!-- 9 -->
+<section>
+  <div class="num">§&thinsp;09</div>
+  <div class="body">
+    <h2>The part that isn't technical</h2>
+    <p class="sub">Worth putting in writing before the install, not after the first outage.</p>
+
+    <div class="note warn">
+      <h4>One — shared circuit, shared fate</h4>
+      <p>One outage takes down both businesses. One bill, one account holder, one party
+      who can cancel the service. Decide now who owns the circuit.</p>
+    </div>
+
+    <div class="note warn">
+      <h4>Two — shared console, shared visibility</h4>
+      <p>Whoever owns the UniFi console can see and change the other tenant's network.
+      UniFi does not do true per-VLAN tenant admin delegation — site admin is site admin.
+      No configuration fixes this. It needs an agreement, or a neutral third party (you)
+      holding the owner account with each tenant on a limited login.</p>
+    </div>
+
+    <div class="note warn">
+      <h4>Three — compliance may forbid the whole premise</h4>
+      <p>The dispensary's rules may not permit shared infrastructure for the camera or
+      seed-to-sale systems. Confirm against state regulation <em>early</em>. If it does not,
+      the answer is a second circuit and a second gateway, and this design collapses into
+      two independent sites that happen to share a building.</p>
+    </div>
+
+    <p>If a second circuit is at all affordable, <strong>give the dispensary its own</strong> and
+    use the 5G Backup on the bar. It removes all three items in one move.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section>
+  <div class="num">§&thinsp;10</div>
+  <div class="body">
+    <h2>Build checklist</h2>
+    <p class="sub">Roughly in order. The three confirmations at the top gate everything below them.</p>
+
+    <ul class="check">
+      <li><input type="checkbox" id="c1"><span><label for="c1">Confirm Dream Machine model and switch models</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="c2"><span><label for="c2">Confirm state camera retention + isolation requirements</label> <span class="ref">§07</span></span></li>
+      <li><input type="checkbox" id="c3"><span><label for="c3">Confirm who owns the circuit and the UniFi console</label> <span class="ref">§09</span></span></li>
+      <li><input type="checkbox" id="c4"><span><label for="c4">Cat6/6A to 5 AP locations, both switch locations, NVR, POS drops</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="c5"><span><label for="c5">Create VLANs and zones, default-deny between tenants first</label> <span class="ref">§03–04</span></span></li>
+      <li><input type="checkbox" id="c6"><span><label for="c6">Verify Bar ⇄ Dispensary block from both directions with a real ping test</label> <span class="ref">§04</span></span></li>
+      <li><input type="checkbox" id="c7"><span><label for="c7">Stand up RADIUS + dynamic VLAN for the staff SSID</label> <span class="ref">§05</span></span></li>
+      <li><input type="checkbox" id="c8"><span><label for="c8">RF tuning pass — after furniture is in, not before</label> <span class="ref">§06</span></span></li>
+      <li><input type="checkbox" id="c9"><span><label for="c9">Walk test on a phone with WiFiman, both halves</label> <span class="ref">§06</span></span></li>
+      <li><input type="checkbox" id="c10"><span><label for="c10">Configure and test 5G failover with guest excluded</label> <span class="ref">§08</span></span></li>
+      <li><input type="checkbox" id="c11"><span><label for="c11">Enable auto-backup, set admin accounts, disable unused remote access</label> <span class="ref">§09</span></span></li>
+      <li><input type="checkbox" id="c12"><span><label for="c12">Run a live card transaction on both sides, on primary and on failover</label> <span class="ref">§08</span></span></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>Design doc · revision 1</span>
+  <span>Specs verified against techspecs.ui.com</span>
+  <span>Items marked TBC pending hardware confirmation</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY='unifi-build-checklist';
+  var boxes=document.querySelectorAll('.check input');
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){saved={}}
+  boxes.forEach(function(b){ if(saved[b.id]) b.checked=true; });
+  function save(){
+    var s={};
+    boxes.forEach(function(b){ if(b.checked) s[b.id]=1; });
+    try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}
+  }
+  boxes.forEach(function(b){ b.addEventListener('change',save); });
+})();
+</script>

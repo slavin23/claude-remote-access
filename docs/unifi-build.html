@@ -267,7 +267,7 @@ footer{
   <dl class="facts">
     <div class="fact"><dt>Access points</dt><dd>5 × U7 Pro XG</dd></div>
     <div class="fact"><dt>Gateway</dt><dd>Dream Machine <span style="color:var(--ink-3);font-weight:500">(model TBC)</span></dd></div>
-    <div class="fact"><dt>Switching</dt><dd>2 × UniFi <span style="color:var(--ink-3);font-weight:500">(models TBC)</span></dd></div>
+    <div class="fact"><dt>Switching</dt><dd>2 × Flex 2.5G PoE</dd></div>
     <div class="fact"><dt>WAN</dt><dd>1 circuit + 5G Backup</dd></div>
   </dl>
 </header>
@@ -277,36 +277,87 @@ footer{
   <div class="num">§&thinsp;01</div>
   <div class="body">
     <h2>Hardware and PoE budget</h2>
-    <p class="sub">Confirm this before anything gets ordered or racked.</p>
+    <p class="sub">The switch choice decides this section. Read the power table before ordering.</p>
 
     <div class="scroll"><table>
       <thead><tr><th>Qty</th><th>Device</th><th>What matters</th></tr></thead>
       <tbody>
         <tr class="t-sys"><td>5</td><td>UniFi U7 Pro XG</td><td class="mono">10 GbE RJ45 uplink · PoE+ (802.3at) · 22 W max · WiFi 7 tri-band</td></tr>
-        <tr class="t-sys"><td>1</td><td>Dream Machine</td><td class="mono">Gateway + controller — model determines PoE ports and NVR bay</td></tr>
-        <tr class="t-sys"><td>2</td><td>UniFi switch</td><td class="mono">One per tenant half — see budget below</td></tr>
+        <tr class="t-sys"><td>1</td><td>Dream Machine</td><td class="mono">Gateway + controller — model still needed, see below</td></tr>
+        <tr class="t-sys"><td>2</td><td>Flex 2.5G PoE</td><td class="mono">8 × 2.5 GbE PoE++ out · 10 GbE RJ45 + 10G SFP+ uplink · 60 Gbps</td></tr>
         <tr class="t-sys"><td>1</td><td>UniFi 5G Backup</td><td class="mono">PoE-powered · RedCap · ~30–85 Mbps real world</td></tr>
       </tbody>
     </table></div>
 
-<pre>5 × U7 Pro XG        <b>110 W</b>   22 W each, PoE+ / 802.3at
-1 × UniFi 5G Backup   <b>~15 W</b>
-Dispensary cameras    <b>~64 W</b>   8 × ~8 W, if PoE — see §07
-─────────────────────────────────
-Working total        <b>~190 W</b>   across two switches</pre>
+    <h3>The Flex 2.5G's PoE budget depends entirely on how you power it</h3>
+    <p>This is the single most important line item in the build.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>Power input</th><th>Total PoE</th><th>U7 Pro XG it can run</th></tr></thead>
+      <tbody>
+        <tr class="t-sys"><td>210 W AC adapter</td><td class="mono">196 W</td><td>8 — port-limited before power-limited</td></tr>
+        <tr class="t-open"><td>PoE+++ on uplink</td><td class="mono">76 W</td><td>3, with no headroom</td></tr>
+        <tr class="t-open"><td>PoE++ on uplink</td><td class="mono">46 W</td><td>2</td></tr>
+        <tr class="t-open"><td>PoE+ on uplink</td><td class="mono">16 W</td><td><span class="tag block">None</span></td></tr>
+      </tbody>
+    </table></div>
 
     <div class="note warn">
-      <h4>The one that bites</h4>
-      <p>Every AP port must be <strong>802.3at (PoE+), not af</strong>. A 15.4 W-per-port
-      af switch will brown these out under load, and the symptom looks like a flaky
-      AP rather than a power problem.</p>
+      <h4>Order this or the build fails quietly</h4>
+      <p>Buy the <strong>210 W AC power adapter for both switches</strong> — it is sold
+      separately. If either Flex ends up powered over its own uplink instead, the PoE
+      budget collapses and the symptom looks like flaky access points, not a power
+      problem. You will chase it for a day.</p>
     </div>
 
-    <h3>Port speed</h3>
-    <p>The Pro XG's uplink is 10 GbE. You will not see 10 Gbps of real client traffic in
-    a bar — 2.5 GbE per AP is genuinely enough — but if the client paid for XG, a switch
-    with multi-gig PoE+ ports is where that money goes. Cat6 handles 10G at these run
-    lengths (under 55 m); Cat6A if any run is long or bundled tight.</p>
+<pre>Bar switch      3 × U7 Pro XG          <b>66 W</b>    fine on AC adapter
+Dispensary      2 × U7 Pro XG           44 W
+                8 × camera (~8 W)       64 W
+                ─────────────────────────────
+                                       <b>108 W</b>    AC adapter required</pre>
+
+    <h3>Port count is the real constraint</h3>
+    <p>Eight access ports per switch does not cover this site.</p>
+
+    <div class="scroll"><table>
+      <thead><tr><th>Side</th><th>Devices</th><th>Ports needed</th></tr></thead>
+      <tbody>
+        <tr class="t-bar"><td>Bar</td><td>3 APs, 2–3 POS, KDS, receipt printer, office PC</td><td class="mono">8–9 <span class="tag block">Over</span></td></tr>
+        <tr class="t-disp"><td>Dispensary</td><td>2 APs, NVR, 2 POS, ID scanner, office PC, <em>8 cameras</em></td><td class="mono">~15 <span class="tag block">Over</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <p>The bar side is full on day one with no spare port for a fix or an addition. The
+    dispensary side is roughly double its capacity the moment cameras are counted — and
+    the 5G Backup needs a port too.</p>
+
+    <div class="note">
+      <h4>Recommended fix</h4>
+      <p>Keep a Flex 2.5G PoE on the bar side, and put a <strong>24-port PoE switch on the
+      dispensary side</strong> to absorb the camera plant. That keeps "one switch per tenant"
+      true, which is what the lease-separation logic in §02 rests on. A third switch
+      dedicated to cameras is cheaper but leaves three boxes to maintain.</p>
+    </div>
+
+    <h3>The 10G uplink on the APs will not be used</h3>
+    <p>The U7 Pro XG has a 10 GbE uplink; the Flex's access ports are 2.5 GbE, so the APs
+    link at 2.5G. <strong>Do not chase this</strong> — 2.5G per AP is far more than a bar
+    will ever generate, and 10G-capable PoE+ access ports cost real money. But say it to
+    the client now rather than let them find it later: the XG premium is not being
+    realized on this switch.</p>
+
+    <p>Cat6 is fine at these run lengths (10G under 55 m); Cat6A if any run is long or
+    bundled tight. Every AP port needs <strong>802.3at (PoE+) or better</strong> — the Flex's
+    ports are PoE++, so that requirement is comfortably met.</p>
+
+    <div class="note warn">
+      <h4>Still open</h4>
+      <p>The <strong>Dream Machine model</strong> decides how the two switches uplink. Each Flex
+      has a 10 GbE RJ45 and a 10G SFP+ uplink, but a UDM Pro has only <em>one</em> 10G SFP+
+      LAN port — the second switch would land on a 1 GbE port and become the bottleneck
+      for that entire tenant.</p>
+    </div>
+
   </div>
 </section>
 
@@ -336,12 +387,12 @@ Working total        <b>~190 W</b>   across two switches</pre>
         <path class="d-line" d="M430 138 V 172 M180 172 H 680 M180 172 V 202 M680 172 V 202"/>
 
         <rect class="d-box-bar" x="90" y="202" width="180" height="48" rx="4"/>
-        <text class="d-t" x="180" y="223" text-anchor="middle">SW · BAR</text>
-        <text class="d-s" x="180" y="239" text-anchor="middle">bar-side space</text>
+        <text class="d-t" x="180" y="221" text-anchor="middle">Flex 2.5G PoE</text>
+        <text class="d-s" x="180" y="238" text-anchor="middle">bar side · AC adapter</text>
 
         <rect class="d-box-disp" x="590" y="202" width="180" height="48" rx="4"/>
-        <text class="d-t" x="680" y="223" text-anchor="middle">SW · DISPENSARY</text>
-        <text class="d-s" x="680" y="239" text-anchor="middle">dispensary space</text>
+        <text class="d-t" x="680" y="221" text-anchor="middle">24-port PoE</text>
+        <text class="d-s" x="680" y="238" text-anchor="middle">dispensary · camera plant</text>
 
         <path class="d-line" d="M180 250 V 288 M680 250 V 288"/>
 
@@ -611,7 +662,9 @@ Working total        <b>~190 W</b>   across two switches</pre>
     <p class="sub">Roughly in order. The three confirmations at the top gate everything below them.</p>
 
     <ul class="check">
-      <li><input type="checkbox" id="c1"><span><label for="c1">Confirm Dream Machine model and switch models</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="c1"><span><label for="c1">Order the 210 W AC adapter for every Flex 2.5G PoE switch</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="c1b"><span><label for="c1b">Resolve the port-count shortfall — 24-port PoE on the dispensary side</label> <span class="ref">§01</span></span></li>
+      <li><input type="checkbox" id="c1c"><span><label for="c1c">Confirm Dream Machine model, then plan both switch uplinks</label> <span class="ref">§01</span></span></li>
       <li><input type="checkbox" id="c2"><span><label for="c2">Confirm state camera retention + isolation requirements</label> <span class="ref">§07</span></span></li>
       <li><input type="checkbox" id="c3"><span><label for="c3">Confirm who owns the circuit and the UniFi console</label> <span class="ref">§09</span></span></li>
       <li><input type="checkbox" id="c4"><span><label for="c4">Cat6/6A to 5 AP locations, both switch locations, NVR, POS drops</label> <span class="ref">§01</span></span></li>
@@ -628,9 +681,9 @@ Working total        <b>~190 W</b>   across two switches</pre>
 </section>
 
 <footer>
-  <span>Design doc · revision 1</span>
+  <span>Design doc · revision 2</span>
   <span>Specs verified against techspecs.ui.com</span>
-  <span>Items marked TBC pending hardware confirmation</span>
+  <span>Open item: Dream Machine model</span>
 </footer>
 
 </div>

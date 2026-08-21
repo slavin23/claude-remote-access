@@ -14,25 +14,68 @@ SSIDs/VLANs behind them.
 |-----|--------|-------|
 | 5 | UniFi U7 Pro XG | 10 GbE RJ45 uplink, **PoE+ (802.3at)**, 22W max, WiFi 7 tri-band |
 | 1 | Dream Machine (model TBC) | Gateway + controller |
-| 2 | UniFi switch (models TBC) | One per tenant half |
-| 1 | UniFi 5G Backup | PoE-powered, RedCap, ~30–85 Mbps real world |
+| 2 | UniFi Flex 2.5G PoE (USW-Flex-2.5G-8-PoE) | 8 x 2.5 GbE PoE++ out, 10 GbE RJ45 + 10G SFP+ uplink, 60 Gbps |
+| 1 | UniFi 5G Backup | PoE-powered, RedCap, ~30-85 Mbps real world |
 
-### PoE budget — check this before you order
-```
-5 x U7 Pro XG        110 W   (22 W each, PoE+ / 802.3at)
-1 x UniFi 5G Backup   ~15 W
-Dispensary cameras    ~64 W   (8 x ~8 W, if PoE — see §7)
---------------------------------------------
-Working total        ~190 W  across two switches
-```
-Every AP port must be **802.3at (PoE+), not af**. A 30W-per-port af switch will
-brown these out under load.
+### The Flex 2.5G's PoE budget depends on how you power the switch
 
-### Port speed
-The Pro XG's uplink is 10 GbE. You will not see 10 Gbps of real client traffic in a
-bar — 2.5 GbE per AP is genuinely enough — but if you paid for XG, a switch with
-2.5G/10G PoE+ ports (e.g. USW Pro Max 24 PoE) is where the money goes. Cat6 is fine
-for 10G at these run lengths (<55 m); Cat6A if any run is long or bundled tight.
+This is the single most important line item in the build:
+
+| Power input | Total PoE available | U7 Pro XG it can run |
+|---|---|---|
+| **210W AC adapter** | **196 W** | 8 (port-limited before power-limited) |
+| PoE+++ input on uplink | 76 W | 3, with no headroom |
+| PoE++ input on uplink | 46 W | 2 |
+| PoE+ input on uplink | 16 W | **0** |
+
+**Buy the AC power adapter for both switches. It is sold separately.** If either
+Flex ends up powered over its uplink instead, the PoE budget collapses and the
+symptom looks like flaky APs, not a power problem.
+
+```
+Bar switch      3 x U7 Pro XG            66 W    OK on AC adapter
+Dispensary      2 x U7 Pro XG            44 W
+                8 x camera (~8 W)        64 W
+                ---------------------------
+                                        108 W    AC adapter required
+```
+
+### Port count is the real constraint
+
+Eight access ports per switch does not cover this site:
+
+| Side | Devices | Ports |
+|------|---------|-------|
+| Bar | 3 APs, 2-3 POS, KDS, receipt printer, office PC | **8-9** |
+| Dispensary | 2 APs, NVR, 2 POS, ID scanner, office PC, **8 cameras** | **~15** |
+
+The bar side is full on day one with no spare port for a fix or an addition. The
+dispensary side is roughly double its capacity as soon as cameras are counted.
+The 5G Backup needs a port too.
+
+**Recommended fix:** keep a Flex 2.5G PoE on the bar side, and put a 24-port PoE
+switch on the dispensary side to absorb the camera plant. That keeps "one switch
+per tenant" true, which matters for the lease-separation logic in section 2.
+The alternative is a third switch dedicated to cameras, which is cheaper but
+leaves three boxes to maintain.
+
+### The 10G uplink on the APs will not be used
+
+The U7 Pro XG has a 10 GbE uplink; the Flex's access ports are 2.5 GbE, so the
+APs will link at 2.5G. **Do not chase this** - 2.5G per AP is far more than a bar
+will ever generate, and 10G-capable PoE+ access ports cost real money. But the
+client should hear it from you now rather than discover it later: the "XG"
+premium is not being realized on this switch.
+
+Cat6 is fine for these runs (10G under 55 m); Cat6A if any run is long or
+bundled tight. Every AP port must be **802.3at (PoE+) or better** - the Flex's
+ports are PoE++, so that requirement is comfortably met.
+
+### Still needed
+The **Dream Machine model** determines how the two switches uplink. Each Flex has
+a 10 GbE RJ45 and a 10G SFP+ uplink, but a UDM Pro, for example, has only one
+10G SFP+ LAN port - the second switch would land on a 1 GbE port and become the
+bottleneck for that whole tenant.
 
 ---
 
@@ -44,7 +87,7 @@ for 10G at these run lengths (<55 m); Cat6A if any run is long or bundled tight.
                   [ Dream Machine ]---- UniFi 5G Backup (WAN2, PoE)
                      /          \
                     /            \
-        [ SW-BAR ]                [ SW-DISP ]
+      [ Flex 2.5G PoE ]          [ 24-port PoE ]
         3 x U7 Pro XG             2 x U7 Pro XG
         Bar POS / KDS             Disp POS / seed-to-sale
         TVs, menu boards          NVR + cameras
@@ -230,7 +273,9 @@ the 5G Backup on the bar. It removes items 1–3 in one move.
 
 ## 10. Build checklist
 
-- [ ] Confirm Dream Machine model and switch models (PoE budget + port speed, §1)
+- [ ] Order the 210W AC adapter for every Flex 2.5G PoE switch (§1)
+- [ ] Resolve the port-count shortfall — 24-port PoE on the dispensary side (§1)
+- [ ] Confirm Dream Machine model, then plan the two switch uplinks (§1)
 - [ ] Confirm state camera retention + isolation requirements (§7)
 - [ ] Confirm who owns the circuit and the UniFi console (§9)
 - [ ] Cat6/6A to all 5 AP locations, both switch locations, NVR, POS drops

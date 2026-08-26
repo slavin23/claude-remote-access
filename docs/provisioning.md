@@ -93,11 +93,16 @@ certificate.
 
 ## Correction to the addressing
 
-While building the config I hit a collision in the earlier plan: **GUEST at
-`10.0.30.0/22` spans `10.0.30.0`–`10.0.33.255`**, which swallows a STAFF network at
-`10.0.31.0/24`.
+While building the config I hit two problems with the earlier addressing.
 
-**STAFF has moved to `10.0.40.0/24`.** VLAN ID is still 31; only the subnet changed.
+**1. GUEST /22 was not a valid boundary.** `10.0.30.0/22` normalises to `10.0.28.0/22`,
+and the controller rejects a DHCP range starting at 10.0.30.10. **GUEST is now
+`10.0.30.0/23`** — spans `10.0.30.0`–`10.0.31.255`, 510 usable, still far more than a
+/24 for a busy Friday.
+
+**2. STAFF collided with it.** The guest block swallows `10.0.31.0/24`, so **STAFF has
+moved to `10.0.40.0/24`.** VLAN ID is still 31; only the subnet changed.
+
 The design doc and the config file both reflect this.
 
 ## After it runs

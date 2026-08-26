@@ -147,14 +147,18 @@ to whoever owns the rack. See section 9.
 | 12 | BAR-IOT | 10.0.12.0/24 | Bar | TVs, digital menu boards, cooler sensors, music |
 | 20 | DISP-POS | 10.0.20.0/24 | Dispensary | POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners |
 | 21 | DISP-BACK | 10.0.21.0/24 | Dispensary | Back office, vault-room PC |
-| 22 | DISP-CAM | 10.0.22.0/24 | Cameras | **Reserved, unused** — surveillance is on its own Cradlepoint, see §7 |
-| 30 | GUEST | 10.0.30.0/22 | Guest | Shared public Wi-Fi, both halves |
-| 31 | STAFF | **10.0.40.0/24** | Staff | Shared staff Wi-Fi — see §5. Not 10.0.31.x: the guest /22 spans 10.0.30–33 |
+| 22 | DISP-CAM | 10.0.22.0/24 | Cameras | **Reserved, not created** — surveillance is on its own Cradlepoint, see §7. The provisioning config no longer builds it |
+| 30 | GUEST | 10.0.30.0/23 | Guest | Shared public Wi-Fi, both halves |
+| 31 | STAFF | **10.0.40.0/24** | Staff | Shared staff Wi-Fi — see §5. Not 10.0.31.x: the guest /23 spans 10.0.30–31 |
 
-Give `GUEST` a **/22, not a /24**. A busy bar on a Friday will chew through 254
+Give `GUEST` a **/23, not a /24**. A busy bar on a Friday will chew through 254
 addresses with phones that never disassociate. DHCP lease 2–4 hours so it recycles.
 
-That /22 spans `10.0.30.0`–`10.0.33.255`, which is why **STAFF sits at 10.0.40.0/24**
+**Not a /22.** `10.0.30.0/22` is not a valid network boundary — it normalises to
+`10.0.28.0/22`, and the controller rejects a DHCP range starting at 10.0.30.10. A /23
+anchored at .30 is valid and still gives 510 usable addresses.
+
+That /23 spans `10.0.30.0`–`10.0.31.255`, which is why **STAFF sits at 10.0.40.0/24**
 rather than the 10.0.31.x its VLAN ID would suggest.
 
 ---

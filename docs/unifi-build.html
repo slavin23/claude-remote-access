@@ -510,19 +510,26 @@ Total                     <b>125 W</b></pre>
         <tr class="t-bar"><td>12</td><td>BAR-IOT</td><td class="mono">10.0.12.0/24</td><td>Bar</td><td>TVs, digital menu boards, cooler sensors, music</td></tr>
         <tr class="t-disp"><td>20</td><td>DISP-POS</td><td class="mono">10.0.20.0/24</td><td>Dispensary</td><td>POS + seed-to-sale (Metrc / Dutchie / Flowhub), ID scanners</td></tr>
         <tr class="t-disp"><td>21</td><td>DISP-BACK</td><td class="mono">10.0.21.0/24</td><td>Dispensary</td><td>Back office, vault-room PC</td></tr>
-        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td><span class="tag">Reserved</span> unused — surveillance is on its own Cradlepoint, see §07</td></tr>
-        <tr class="t-open"><td>30</td><td>GUEST</td><td class="mono">10.0.30.0/22</td><td>Guest</td><td>Shared public Wi-Fi, both halves</td></tr>
-        <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.40.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05. <em>Not</em> 10.0.31.x: the guest /22 spans 10.0.30–33</td></tr>
+        <tr class="t-cam"><td>22</td><td>DISP-CAM</td><td class="mono">10.0.22.0/24</td><td>Cameras</td><td><span class="tag">Reserved</span> not created — surveillance is on its own Cradlepoint, see §07</td></tr>
+        <tr class="t-open"><td>30</td><td>GUEST</td><td class="mono">10.0.30.0/23</td><td>Guest</td><td>Shared public Wi-Fi, both halves</td></tr>
+        <tr class="t-open"><td>31</td><td>STAFF</td><td class="mono">10.0.40.0/24</td><td>Staff</td><td>Shared staff Wi-Fi — see §05. <em>Not</em> 10.0.31.x: the guest /23 spans 10.0.30–31</td></tr>
       </tbody>
     </table></div>
 
-    <p>Give <code>GUEST</code> a <strong>/22, not a /24</strong>. A busy bar on a Friday will chew
+    <p>Give <code>GUEST</code> a <strong>/23, not a /24</strong>. A busy bar on a Friday will chew
     through 254 addresses with phones that never disassociate. Set the DHCP lease to
     2–4 hours so it recycles.</p>
 
     <div class="note warn">
+      <h4>Not a /22</h4>
+      <p><code>10.0.30.0/22</code> is <em>not</em> a valid network boundary — it normalises to
+      <code>10.0.28.0/22</code>, and the controller rejects a DHCP range starting at
+      10.0.30.10. A /23 anchored at .30 is valid and still gives 510 usable addresses.</p>
+    </div>
+
+    <div class="note warn">
       <h4>Watch the overlap</h4>
-      <p>That /22 spans <code>10.0.30.0</code>–<code>10.0.33.255</code>, which is why
+      <p>That /23 spans <code>10.0.30.0</code>–<code>10.0.31.255</code>, which is why
       <strong>STAFF sits at 10.0.40.0/24</strong> rather than the 10.0.31.x its VLAN ID
       would suggest. VLAN ID is still 31; only the subnet moved.</p>
     </div>

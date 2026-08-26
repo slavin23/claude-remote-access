@@ -1,14 +1,15 @@
-# Handoff — UniFi bar/dispensary build
+# Handoff — Fields UniFi build (bar / dispensary)
 
-Context primer for a fresh Claude Code session running **locally**, on the laptop that
-is physically connected to the gateway. A cloud session cannot reach the UDM Pro; a
-local one can.
+Context primer for a fresh Claude Code session running **locally on the laptop that
+goes to site**. Earlier sessions ran elsewhere — a cloud session that could not reach
+the gateway, then a desktop at the shop. Claude Code transcripts do not sync between
+machines, so this file is the only thing that crosses over. Keep it current.
 
 ## Start here
 
 ```bash
-git clone https://github.com/slavin23/claude-remote-access.git
-cd claude-remote-access
+git clone https://github.com/slavin23/claude-remote-access.git fields-canary-network
+cd fields-canary-network
 git checkout claude/unifi-bar-dispensary-setup-bqharh
 claude
 ```
@@ -16,14 +17,32 @@ claude
 Opening message to paste:
 
 > Read HANDOFF.md, docs/unifi-bar-dispensary-design.md and docs/provisioning.md.
-> I have a UDM Pro on my bench, port 9 to my home router, port 1 to this laptop.
-> I'm in the setup wizard. Walk me through it, then provision the VLANs.
+> I'm on site with the UDM Pro. Walk me through the setup wizard, then provision
+> the VLANs.
 
 ---
 
+## Before you leave the shop
+
+Do these while you still have working internet. On site you are *building* the
+internet — assume there is none until you have made one.
+
+- [ ] **Clone this repo onto the laptop.** Not on site.
+- [ ] **Install Python 3.** `provision_unifi.py` is stdlib-only but still needs an
+      interpreter. There was none on the shop desktop, so do not assume the laptop
+      has one. `python --version` must answer.
+- [ ] **Install Git and Claude Code** on the laptop, and sign in once.
+- [ ] **Bring a phone hotspot.** Claude Code needs to reach the API — it will not run
+      on a site with no circuit. `docs/unifi-build.html` opens offline in a browser
+      and is the field reference if you end up with no signal.
+- [ ] **Have the three Wi-Fi passphrases decided and written down.** They are
+      deliberately not in this repo — the script reads them from the environment:
+      `WIFI_STAFF_PSK`, `WIFI_BARPOS_PSK`, `WIFI_DISPPOS_PSK`.
+- [ ] Ethernet port or a USB-C adapter, and a patch cable.
+
 ## The job
 
-One building, split down the middle: **bar/restaurant** on one half, **dispensary** on
+One building split down the middle: **bar/restaurant** on one half, **dispensary** on
 the other. Two independent businesses, one ISP circuit, one gateway. They want a shared
 guest SSID and a shared staff SSID that must not become a shared network.
 
@@ -44,12 +63,16 @@ WAN1 is 1 GbE so the circuit caps the site anyway. No DAC to buy.
 **Cameras are out of scope** — third-party system on its own Cradlepoint cellular
 circuit, never touches this network.
 
-## Current state
+## Current state — verified 2026-08-26
 
-- UDM Pro is on the bench at home, **port 9 → home router**, **port 1 → laptop**
-- Sitting in the first-run setup wizard, reachable in Chrome
-- Nothing configured yet
-- Design, config, and provisioning script are all written and committed
+- UDM Pro was on the bench at the shop, **port 9 → house router**, **port 1 → laptop**
+- **Still on its factory LAN.** It answered on `https://192.168.1.1` (443 open) and
+  handed the attached machine `192.168.1.129`. `10.0.1.1` did not answer.
+- **The setup wizard has not been completed.** Nothing is configured yet.
+- Design, config, provisioning script and this handoff are written and committed
+
+If the gateway moves to site before the wizard is run, it will still come up on
+`192.168.1.1`. Plug into a LAN port, take a DHCP lease, and go there.
 
 ## Immediate next step: the setup wizard
 
@@ -82,20 +105,30 @@ Create the AP groups `bar` and `dispensary` in the UI **before** running with `-
 Firewall zones and policies are deliberately **not** scripted — build them by hand. The
 script prints the full worklist at the end of every run.
 
-Back up the site once it looks right, so the bench build survives the trip.
+Back up the site once it looks right.
 
-## Files
+## Changed since the last handoff
 
-```
-docs/unifi-bar-dispensary-design.md   full design, sections 0-10
-docs/provisioning.md                  how the script works, what is manual
-docs/unifi-build.html                 same design as a published reference page
-config/site-config.json               the design as data — source of truth
-scripts/provision_unifi.py            creates VLANs and WLANs via the controller API
-```
+- **GUEST is `10.0.30.0/23`, not /22.** `10.0.30.0/22` is not a valid network boundary —
+  it normalises to `10.0.28.0/22` and the controller rejects a DHCP range starting at
+  `10.0.30.10`. The /23 spans `10.0.30.0`–`10.0.31.255`, 510 usable. DHCP range now
+  ends at `10.0.31.250`.
+- **DISP-CAM (VLAN 22) is no longer created.** Network, `Cameras` zone and both camera
+  firewall policies are out of `site-config.json`, since surveillance lives on its own
+  Cradlepoint. VLAN 22 stays *reserved on paper* — §7 of the design doc still has the
+  policy written for the day it ever moves onto this circuit.
+- **Guest SSID renamed `Venue Guest` → `Fields Guest`.**
+- Design doc, `provisioning.md` and `unifi-build.html` all updated to match.
 
-Published reference page:
-https://claude.ai/code/artifact/3e8596c7-6306-4f7b-bb17-26f91a8f4fdf
+## Open — decide these on site
+
+1. **The staff SSID is still named `Venue Staff` in the config.** The guest rename went
+   through, this one did not. Before applying `--wlans`, decide what a *shared* staff
+   SSID across two unaffiliated businesses should be called — "Fields Staff" is only
+   right if Fields is the building, not just the bar.
+2. **RADIUS or PSK for staff.** The design calls for WPA-Enterprise with dynamic VLAN
+   (bar accounts → VLAN 11, dispensary → VLAN 21). The PSK in the config is the
+   fallback. If it goes PSK, VLAN 31 must be internet-only — see §5.
 
 ## Things a cold session should know
 
@@ -103,10 +136,22 @@ https://claude.ai/code/artifact/3e8596c7-6306-4f7b-bb17-26f91a8f4fdf
   `config.gateway.json` is USG-legacy. The API is the only programmatic path.
 - **SSH is diagnostic, not provisioning.** UniFi OS regenerates device config on every
   provision cycle and overwrites hand edits.
-- **STAFF is at `10.0.40.0/24`, not 10.0.31.x.** The guest /22 spans 10.0.30.0-10.0.33.255
-  and would swallow it. VLAN ID is still 31.
-- The staff SSID should really be **WPA-Enterprise with dynamic VLAN** (bar accounts →
-  VLAN 11, dispensary → VLAN 21). The PSK in the config is the fallback.
+- **The script must run from a machine on the site LAN.** There is no remote path in.
+- **STAFF is at `10.0.40.0/24`, not 10.0.31.x.** The guest /23 spans
+  10.0.30.0-10.0.31.255 and would swallow it. VLAN ID is still 31.
+
+## Files
+
+```
+docs/unifi-bar-dispensary-design.md   full design, sections 0-10
+docs/provisioning.md                  how the script works, what is manual
+docs/unifi-build.html                 same design as a field reference page, works offline
+config/site-config.json               the design as data — source of truth
+scripts/provision_unifi.py            creates VLANs and WLANs via the controller API
+```
+
+Published reference page:
+https://claude.ai/code/artifact/3e8596c7-6306-4f7b-bb17-26f91a8f4fdf
 
 ## Open questions for the client
 

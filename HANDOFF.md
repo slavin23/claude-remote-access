@@ -110,8 +110,20 @@ Applied, both ends of each uplink:
 - UDM Pro Port 1 + `restaurant` switch Port 1 → `BAR-TRUNK`
 - UDM Pro Port 2 + `dispo` switch Port 1 → `DISP-TRUNK`
 
+**Every other port on both switches also got a default profile**, bulk-applied since
+nothing else was actually connected to any of them yet (safe — nothing to disrupt):
+
+- `restaurant` ports 2, 4–24 → `BAR-POS-PORT`
+- `dispo` ports 2–24 → `DISP-POS-PORT`
+- SFP+ 25/26 on both left alone — fiber uplinks, not RJ45 access ports, unused today
+
+**No port on either switch is left on the factory "Allow All" profile anymore.** As
+real drops get identified, move each one off `*-POS-PORT` to the profile that
+actually matches it (office → `*-BACK-PORT`, bar TVs/menu boards → `BAR-IOT-PORT`).
+
 Verified afterward: all 11 devices stayed Online/Up to date through every change —
-no drop on the APs or either switch.
+no drop on the APs or either switch. (`dispo` briefly showed "Getting Ready" while
+pushing 23 port configs at once, then settled — expected, not a fault.)
 
 **Found and partly fixed a live exposure:** a client ("Samsung 1b:bf" — a picture
 display TV, per Jason) was plugged into **`restaurant` switch, port 3**, sitting
@@ -134,37 +146,33 @@ and APs, because no port profile had ever been applied. It's now on `BAR-IOT-POR
   is for something the internet needs to reach inbound, the opposite of what a
   display TV needs. Raise this with Jason before building it.
 
-**Not touched:** every other port on both switches is still on the default profile.
-No physical map of drops exists yet, so nothing was blanket-applied — assign each
-port's profile as its drop gets wired, per `docs/switch-setup.md`.
+## The setup wizard — already done, nothing to do here
 
-## Immediate next step: the setup wizard
+Earlier drafts of this handoff opened with the four wizard decisions (advanced setup,
+LAN subnet, auto-optimize off, local admin). **All of that is done** — confirmed live
+2026-09-05: gateway at `10.0.1.1`, local admin exists, site named Fields Cannary.
+Leaving this note so a cold session doesn't re-walk the wizard or second-guess the
+subnet.
 
-Four decisions that are painful to undo:
+## Then provision — WLANs are the remaining piece
 
-1. **Advanced setup**, not the automatic path — you need control of the LAN subnet
-2. **LAN subnet → `10.0.1.1/24`** (the MGMT network). Do it now, not after adoption.
-   The browser tab will die when this applies — renew DHCP, come back at `https://10.0.1.1`
-3. **Auto-Optimize Network → OFF.** It manages its own settings and fights the design
-4. **Create a local admin account**, not only ui.com SSO — `provision_unifi.py`
-   authenticates against a local admin
+The networks half is already done — all 8 VLANs exist and match `site-config.json`.
+Only the WLANs are left, and only `Fields Guest` exists so far.
 
-Also: real timezone, auto-backup on, name the console for the site.
-
-## Then provision
+**Create the AP groups `bar` and `dispensary` in the UI first** — not found as of
+2026-09-05. The POS SSIDs are silently skipped without them.
 
 ```bash
 export UNIFI_PASSWORD='...'
 export WIFI_STAFF_PSK='...' WIFI_BARPOS_PSK='...' WIFI_DISPPOS_PSK='...'
 
-# dry run first — this is the default, nothing is written
-python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin
+# dry run first — this is the default, nothing is written. Re-running against
+# networks that already exist is safe: the script skips anything whose name matches.
+python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin --wlans
 
 # then apply
-python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin --apply
+python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin --apply --wlans
 ```
-
-Create the AP groups `bar` and `dispensary` in the UI **before** running with `--wlans`.
 
 Firewall zones and policies are deliberately **not** scripted — build them by hand. The
 script prints the full worklist at the end of every run.
@@ -201,8 +209,10 @@ Back up the site once it looks right.
    switch once its cable is run there, and set that port to `DISP-BACK-PORT`. See
    "Completed 2026-09-05" above for the full story and the signage-zone recommendation
    that's waiting on Jason's go-ahead.
-6. **Assign port profiles as each drop gets wired.** No other ports on either switch
-   have a profile yet — everything past the uplinks is still on the factory default.
+6. **Refine the default port assignment as each drop gets wired.** Every port on both
+   switches now has a profile (POS everywhere, as a safe baseline — see "Completed"
+   above), but that's not the real map. Move office drops to `*-BACK-PORT` and bar
+   TV/menu-board drops to `BAR-IOT-PORT` as they're identified.
 
 ## Things a cold session should know
 

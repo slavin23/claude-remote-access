@@ -4,8 +4,10 @@ One switch per tenant: restaurant/bar on one, dispensary on the other. Both are
 **USW-24 (Standard 24), non-PoE**, 24x 1 GbE + 2x 1G SFP, with a **1.3" touchscreen
 LCM display** on the front.
 
-**Status as of 2026-09-05: naming and trunking done, remotely via unifi.ui.com.
-Access-port assignment is not — no physical drop map exists yet.**
+**Status as of 2026-09-05: naming, trunking, and a default access-port profile on
+every port are all done, remotely via unifi.ui.com. Still open: refine the default
+(POS profile everywhere) to match real drops as they're identified, physically move
+the TV to `dispo`, and the on-site ping tests.**
 
 ## First, the thing that is easy to get wrong
 
@@ -83,16 +85,44 @@ GUEST to that one tenant's trunk deliberately; don't pre-authorise it on both.
 Verified after applying: all 11 devices on the site (both switches, all 5 APs, PDU,
 Flex, 5G Backup, gateway) stayed Online/Up to date through every change — no drop.
 
-## 4. Access ports — not done, no physical map yet
+## 4. Access ports — default applied to every remaining port, 2026-09-05
 
-Nothing past the uplinks has a profile. Every other port on both switches is still on
-the factory default ("Allow All" tagged, native MGMT) — the exact leak this whole
-exercise exists to close. **One live example found and partly fixed:**
+No physical drop map exists yet, but nothing else was connected either, so every
+unused port on both switches was bulk-set to that tenant's primary profile — the
+safe baseline the earlier draft of this doc recommended, applied now that it was
+confirmed low-risk (nothing live to disrupt):
 
-**`restaurant` port 3 had a client — a picture-display TV — sitting untagged on MGMT.**
-It's now on `BAR-IOT-PORT` (off MGMT) as a stopgap, but it's cabled to the wrong
-switch: Jason confirmed it belongs on `dispo`, serving the dispensary, and he'll move
-the physical cable later. **Once moved, assign that port on `dispo` to
+| Switch | Ports | Profile applied |
+|---|---|---|
+| `restaurant` | 2, 4–24 (22 ports) | `BAR-POS-PORT` |
+| `dispo` | 2–24 (23 ports) | `DISP-POS-PORT` |
+
+Left alone on purpose:
+- **Port 1 on both** — already `BAR-TRUNK` / `DISP-TRUNK`, the uplinks.
+- **`restaurant` port 3** — the picture-display TV, see below.
+- **SFP+ 25/26 on both** — fiber uplink ports, not RJ45 access ports. No profile
+  applied; nothing plugs into them today.
+
+Verified after applying: all 11 devices on the site stayed Online/Up to date. `dispo`
+briefly showed "Getting Ready" while it pushed 23 port configs, then settled back to
+normal — expected, not a fault.
+
+**This is a starting default, not the finished map.** As real drops get identified,
+move each one off `*-POS-PORT` to the profile that actually matches it:
+
+- **`restaurant`:** office drops → `BAR-BACK-PORT`, TV/menu-board drops →
+  `BAR-IOT-PORT`
+- **`dispo`:** office and vault-room drops → `DISP-BACK-PORT`
+
+Anything that ends up genuinely unused once the build is done: **disable the port.**
+An empty live jack in a public bar is a way onto the POS VLAN.
+
+### The picture-display TV — still a stopgap
+
+**`restaurant` port 3 had a client — a picture-display TV — sitting untagged on MGMT**
+before any of this was done. It's now on `BAR-IOT-PORT` (off MGMT), but it's cabled to
+the wrong switch: Jason confirmed it belongs on `dispo`, serving the dispensary, and
+he'll move the physical cable later. **Once moved, assign that port on `dispo` to
 `DISP-BACK-PORT`** — do not add `DISP-BACK` to `BAR-TRUNK` to patch it in early on
 `restaurant`; that punches a hole in the tenant separation for the sake of one
 mis-cabled device.
@@ -104,17 +134,6 @@ network over VLAN routing within the same zone. The cleaner design is a dedicate
 zone for low-trust signage/display gear per tenant — blocked from every internal zone,
 allowed only to External — not UniFi's built-in `DMZ` zone, which is for something the
 internet needs to reach inbound. Not built; needs Jason's sign-off first.
-
-When drops get wired, set the **whole switch's remaining ports** to that tenant's
-primary profile, then override the individual drops as they're identified:
-
-- **`restaurant`:** default → `BAR-POS-PORT`, then move office drops to
-  `BAR-BACK-PORT` and TV/menu-board drops to `BAR-IOT-PORT`
-- **`dispo`:** default → `DISP-POS-PORT`, then move office and vault-room drops to
-  `DISP-BACK-PORT`
-
-Anything genuinely unused: **disable the port.** An empty live jack in a public bar is
-a way onto the POS VLAN.
 
 ## 5. Label the ports in the controller
 
@@ -128,11 +147,11 @@ means nothing and "KDS — kitchen pass" means everything.
 - [x] Both switches show their alias on the front LCM screen (`restaurant`, `dispo`)
 - [x] Both reachable, adopted, provisioned green
 - [ ] Static/reserved MGMT IPs set on both switches
+- [x] No port anywhere is left on the default "All" profile — confirmed 2026-09-05
 - [ ] A laptop on a `BAR-POS-PORT` gets a **10.0.10.x** address
 - [ ] A laptop on a `DISP-POS-PORT` gets a **10.0.20.x** address
 - [ ] From the bar-side laptop, **ping the dispensary laptop — it must fail**
 - [ ] Reverse it and ping back — **must also fail**
-- [ ] No port anywhere is left on the default "All" profile
 - [ ] Unused ports disabled
 - [ ] LCM screens locked
 - [ ] Back up the site

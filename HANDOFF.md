@@ -63,16 +63,18 @@ WAN1 is 1 GbE so the circuit caps the site anyway. No DAC to buy.
 **Cameras are out of scope** — third-party system on its own Cradlepoint cellular
 circuit, never touches this network.
 
-## Current state — verified 2026-08-26
+## Current state — updated 2026-09-05
 
-- UDM Pro was on the bench at the shop, **port 9 → house router**, **port 1 → laptop**
-- **Still on its factory LAN.** It answered on `https://192.168.1.1` (443 open) and
-  handed the attached machine `192.168.1.129`. `10.0.1.1` did not answer.
-- **The setup wizard has not been completed.** Nothing is configured yet.
-- Design, config, provisioning script and this handoff are written and committed
+- **The gear has moved to site.** The shop desktop's Ethernet is disconnected, and the
+  stale default route it left behind points at `10.0.1.1` — so **the wizard's LAN
+  re-address to `10.0.1.1/24` was completed** before the UDM Pro left the bench.
+- **Both USW-24s are installed and live at the site.**
+- Nothing can be configured from the shop. There is no remote path into that
+  controller — no port forward, no VPN. Work from the on-site laptop.
 
-If the gateway moves to site before the wizard is run, it will still come up on
-`192.168.1.1`. Plug into a LAN port, take a DHCP lease, and go there.
+**Next job: the two switches.** See `docs/switch-setup.md` — naming so the front LCM
+screens identify each one, and the trunk allow-lists that keep each tenant's VLANs off
+the other's cable. Not yet done.
 
 ## Immediate next step: the setup wizard
 
@@ -144,6 +146,7 @@ Back up the site once it looks right.
 
 ```
 docs/unifi-bar-dispensary-design.md   full design, sections 0-10
+docs/switch-setup.md                  the two USW-24s: naming, LCM screens, port profiles
 docs/provisioning.md                  how the script works, what is manual
 docs/unifi-build.html                 same design as a field reference page, works offline
 config/site-config.json               the design as data — source of truth

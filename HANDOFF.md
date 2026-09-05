@@ -65,16 +65,78 @@ circuit, never touches this network.
 
 ## Current state — updated 2026-09-05
 
-- **The gear has moved to site.** The shop desktop's Ethernet is disconnected, and the
-  stale default route it left behind points at `10.0.1.1` — so **the wizard's LAN
-  re-address to `10.0.1.1/24` was completed** before the UDM Pro left the bench.
-- **Both USW-24s are installed and live at the site.**
-- Nothing can be configured from the shop. There is no remote path into that
-  controller — no port forward, no VPN. Work from the on-site laptop.
+The site is much further along than the previous handoff assumed. Gear is installed,
+and most of the earlier "next steps" are done:
 
-**Next job: the two switches.** See `docs/switch-setup.md` — naming so the front LCM
-screens identify each one, and the trunk allow-lists that keep each tenant's VLANs off
-the other's cable. Not yet done.
+- **Wizard complete.** Gateway is live at `10.0.1.1`, local admin exists, site is
+  named **Fields Cannary**.
+- **All 8 networks/VLANs exist and match `config/site-config.json` exactly** —
+  including the GUEST `/23` correction. Someone (a prior session or Jason) already
+  ran the networks half of `provision_unifi.py`, or built them by hand.
+- **Firewall zones and policies are built** — `Bar`, `Dispensary`, `Staff`, `Mgmt`
+  zones exist, and `Bar ⇄ Dispensary` is confirmed **blocked in both directions**
+  (verified live in the zone matrix, both IPv4/IPv6, all protocols).
+- **Both USW-24s are adopted, online, and each home-run to its own UDM Pro port** —
+  not daisy-chained. Named `restaurant` (→ UDM Port 1) and `dispo` (→ UDM Port 2).
+  Those names already show on the front LCM screens; no rename needed.
+- **Port profiles and trunking are done** — see "Completed 2026-09-05" below.
+- **Only `Fields Guest` SSID exists.** Staff, BAR-POS, and DISP-POS SSIDs are not
+  built yet, and AP groups `bar`/`dispensary` were not found — confirm before
+  running `--wlans`.
+
+**Remote access works for hand-configuration.** Everything below was done through
+`unifi.ui.com`'s cloud console, from a machine with no LAN route to the site at all.
+The "no remote path in" note further down is still correct for one specific thing:
+running `scripts/provision_unifi.py` itself, which targets the controller's LAN IP
+(`10.0.1.1`) directly and has to run from a machine on-site. The interactive UI does
+not have that restriction.
+
+## Completed 2026-09-05 (via unifi.ui.com, no site LAN access)
+
+Port profiles created (`Networks → Port Profiles`):
+
+| Profile | Mode | Native VLAN | Tagged VLANs |
+|---|---|---|---|
+| `BAR-TRUNK` | Infrastructure | MGMT | BAR-POS, BAR-BACK, BAR-IOT |
+| `DISP-TRUNK` | Infrastructure | MGMT | DISP-POS, DISP-BACK |
+| `BAR-POS-PORT` | Edge | BAR-POS | none |
+| `BAR-BACK-PORT` | Edge | BAR-BACK | none |
+| `BAR-IOT-PORT` | Edge | BAR-IOT | none |
+| `DISP-POS-PORT` | Edge | DISP-POS | none |
+| `DISP-BACK-PORT` | Edge | DISP-BACK | none |
+
+Applied, both ends of each uplink:
+
+- UDM Pro Port 1 + `restaurant` switch Port 1 → `BAR-TRUNK`
+- UDM Pro Port 2 + `dispo` switch Port 1 → `DISP-TRUNK`
+
+Verified afterward: all 11 devices stayed Online/Up to date through every change —
+no drop on the APs or either switch.
+
+**Found and partly fixed a live exposure:** a client ("Samsung 1b:bf" — a picture
+display TV, per Jason) was plugged into **`restaurant` switch, port 3**, sitting
+untagged on **MGMT (VLAN 1)** — the same broadcast domain as the controller, switches,
+and APs, because no port profile had ever been applied. It's now on `BAR-IOT-PORT`
+(off MGMT), but that's a **stopgap**, not its intended home:
+
+- Jason confirmed the TV is cabled into the wrong switch — it belongs on `dispo`,
+  and he'll move the physical cable later.
+- Once moved: assign that port on `dispo` to **`DISP-BACK-PORT`** (Jason's choice —
+  no dedicated VLAN, simplest option). Do **not** add `DISP-BACK` to `BAR-TRUNK` to
+  patch it in early on the `restaurant` switch — that punches a hole in the exact
+  separation this build exists for. Leave it on `BAR-IOT-PORT` until the cable moves.
+- **Bigger recommendation, not yet built, needs Jason's go-ahead:** `BAR-IOT` and any
+  future `DISP-IOT` sit inside the `Bar`/`Dispensary` zones today, and intra-zone
+  traffic isn't isolated (`L3 Network Isolation (ACL)` is off) — so a bar TV can
+  currently reach the bar POS network. The clean fix is a dedicated zone for
+  low-trust display/signage gear (one network per tenant, blocked from every
+  internal zone, allowed only to External) — not UniFi's built-in `DMZ` zone, which
+  is for something the internet needs to reach inbound, the opposite of what a
+  display TV needs. Raise this with Jason before building it.
+
+**Not touched:** every other port on both switches is still on the default profile.
+No physical map of drops exists yet, so nothing was blanket-applied — assign each
+port's profile as its drop gets wired, per `docs/switch-setup.md`.
 
 ## Immediate next step: the setup wizard
 
@@ -131,6 +193,16 @@ Back up the site once it looks right.
 2. **RADIUS or PSK for staff.** The design calls for WPA-Enterprise with dynamic VLAN
    (bar accounts → VLAN 11, dispensary → VLAN 21). The PSK in the config is the
    fallback. If it goes PSK, VLAN 31 must be internet-only — see §5.
+3. **Create AP groups `bar` and `dispensary`** before running `--wlans` — not found
+   as of 2026-09-05. The POS SSIDs are skipped without them.
+4. **Build the remaining SSIDs** — only `Fields Guest` exists so far. Staff, BAR-POS,
+   and DISP-POS are still to create.
+5. **Move the misplaced picture-display TV** from `restaurant` port 3 to the `dispo`
+   switch once its cable is run there, and set that port to `DISP-BACK-PORT`. See
+   "Completed 2026-09-05" above for the full story and the signage-zone recommendation
+   that's waiting on Jason's go-ahead.
+6. **Assign port profiles as each drop gets wired.** No other ports on either switch
+   have a profile yet — everything past the uplinks is still on the factory default.
 
 ## Things a cold session should know
 

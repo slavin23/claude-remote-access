@@ -226,6 +226,56 @@ reset or re-adoption — this is purely getting one config change delivered.
   Jason what this is; a stray device sitting on the management network is worth
   a name, not a mystery.
 
+## Completed 2026-09-07 (continued) — idle-port hardening, both switches
+
+Jason asked for one VLAN that let every device talk to everything, to stop a repeat
+of the outage above. That's not what got built — a flat network would undo the whole
+point of the design (bar ⇄ dispensary isolation, PCI/compliance separation). What he
+actually needed was for **an unused port to never again block a switch from its own
+management traffic** — that's a port-default problem, not a VLAN-topology one.
+
+Two new port profiles, native VLAN MGMT(1), Tagged VLAN Management **Block All** (so
+still zero bridging into the other tenant's VLANs), Edge mode:
+
+| Profile | Native VLAN | Tagged |
+|---|---|---|
+| `BAR-IDLE-PORT` | MGMT (1) | Block All |
+| `DISP-IDLE-PORT` | MGMT (1) | Block All |
+
+Applied to **every port that isn't a trunk, and isn't the picture-display TV** —
+i.e. all the ports last session defaulted to `*-POS-PORT`:
+
+- `restaurant`: ports 2, 4–23 (21 ports) → `BAR-IDLE-PORT`. Port 1 and 24 stay
+  `BAR-TRUNK`, port 3 stays `BAR-IOT-PORT` (the TV).
+- `dispo`: ports 2–23 (22 ports) → `DISP-IDLE-PORT`. Port 1 and 24 stay `DISP-TRUNK`.
+- SFP+ 25/26 on both left untouched — same reasoning as 2026-09-05, nothing plugs
+  into fiber the way it plugs into RJ45.
+
+Verified on both switches by the Native VLAN counts in the controller: `restaurant`
+now reads `MGMT (25)`, `BAR-IOT (1)` — zero ports left on `BAR-POS-PORT`. `dispo`
+reads `MGMT (26)` — every port, no exceptions.
+
+**What this buys:** if a cable ever lands on one of these ports again — as an uplink,
+as a laptop for diagnostics, as anything — it gets management reachability
+immediately, because the port's native VLAN is already MGMT. It does **not** get
+bridged into either tenant's POS/back-office VLAN, since Tagged VLAN Management is
+Block All. The isolation this whole build exists for is unchanged.
+
+**This is a default, not a finished map**, same caveat as before: as real POS
+terminals, office PCs, and TVs get identified for specific ports, move that specific
+port off `*-IDLE-PORT` to `*-POS-PORT` / `*-BACK-PORT` / `*-IOT-PORT` as appropriate.
+
+**Standing recommendation, not yet acted on:** designate one port per switch as the
+permanent, never-reassigned management fallback — port 1 already fits, since it's
+been the working uplink on both switches historically. Document it as "do not patch
+a client device here" so this class of outage can't recur even if a future uplink
+move again lands on a currently-idle port instead of a designated one.
+
+**This work was done entirely from the shop desktop with no site LAN access, on the
+still-offline switches** — the config changes queue exactly like the port 24 fix
+above, and will apply the moment each switch phones home per the recovery steps.
+No additional physical work was created by doing this now.
+
 ## The setup wizard — already done, nothing to do here
 
 Earlier drafts of this handoff opened with the four wizard decisions (advanced setup,
@@ -290,8 +340,8 @@ Back up the site once it looks right.
    "Completed 2026-09-05" above for the full story and the signage-zone recommendation
    that's waiting on Jason's go-ahead.
 6. **Refine the default port assignment as each drop gets wired.** Every port on both
-   switches now has a profile (POS everywhere, as a safe baseline — see "Completed"
-   above), but that's not the real map. Move office drops to `*-BACK-PORT` and bar
+   switches now has a safe idle default (`*-IDLE-PORT` — MGMT-reachable, no tenant
+   bridging, see "Completed 2026-09-07 (continued)"), not the real map. Move office drops to `*-BACK-PORT` and bar
    TV/menu-board drops to `BAR-IOT-PORT` as they're identified.
 
 ## Things a cold session should know

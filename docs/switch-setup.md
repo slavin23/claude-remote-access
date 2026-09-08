@@ -12,6 +12,11 @@ The corrected profile is saved in the controller but can't reach either switch w
 it's cut off. See "3b. The 2026-09-07 outage" below for the exact recovery steps —
 it's a one-minute cable swap per switch, no rebuild or reset needed.
 
+**Also done 2026-09-07, while still offline:** every non-trunk, non-TV port on both
+switches moved from `*-POS-PORT` to a new `*-IDLE-PORT` default — MGMT-reachable,
+still zero cross-tenant bridging — so a future cable landing on an unused port can't
+repeat this outage. See §4b.
+
 Naming, trunking, and a default access-port profile on every port were completed
 2026-09-05, remotely via unifi.ui.com. Still open beyond the outage above: refine
 the default (POS profile everywhere) to match real drops as they're identified,
@@ -169,6 +174,46 @@ move each one off `*-POS-PORT` to the profile that actually matches it:
 
 Anything that ends up genuinely unused once the build is done: **disable the port.**
 An empty live jack in a public bar is a way onto the POS VLAN.
+
+## 4b. Idle-port hardening — 2026-09-07, in response to the §3b outage
+
+Jason's reaction to the outage above was "let's just have one VLAN where everything
+can talk to everything" — understandable, but the wrong fix: it would undo the entire
+point of this build (tenant isolation, PCI/compliance separation). The actual problem
+wasn't the VLAN topology, it was that an **unused port defaulted to something that
+blocked a switch's own management traffic** the moment it became an uplink.
+
+Two new profiles, same shape as the trunks minus the tagged VLANs:
+
+| Profile | Mode | Native VLAN | Tagged |
+|---|---|---|---|
+| `BAR-IDLE-PORT` | Edge | MGMT (1) | Block All |
+| `DISP-IDLE-PORT` | Edge | MGMT (1) | Block All |
+
+Applied to every port that was on `*-POS-PORT` from §4 (i.e. everything except the
+two trunk ports and the TV):
+
+- `restaurant`: ports 2, 4–23 (21 ports) → `BAR-IDLE-PORT`
+- `dispo`: ports 2–23 (22 ports) → `DISP-IDLE-PORT`
+
+Verified via the Native VLAN counts in the controller: `restaurant` reads
+`MGMT (25)` / `BAR-IOT (1)` — zero ports left on `BAR-POS-PORT`. `dispo` reads
+`MGMT (26)` — every single port.
+
+**Effect:** any port that isn't yet assigned a real device now defaults to
+MGMT-reachable, so a cable landing there — as a new uplink, a laptop, anything — gets
+management access immediately instead of silently locking the switch out. It still
+cannot bridge into the other tenant's VLANs (Block All), so the isolation this build
+exists for is unchanged. This directly prevents a repeat of §3b: had these ports
+carried this profile *before* the re-cabling, the outage would not have happened.
+
+**Still a default, not the finished map** — same as §4's caveat. As real drops get
+identified, move that specific port off `*-IDLE-PORT` to `*-POS-PORT` /
+`*-BACK-PORT` / `*-IOT-PORT`.
+
+**Open recommendation:** designate one port per switch (port 1 fits — it's the
+historical working uplink on both) as a permanent, never-reassigned management
+fallback, labeled "do not patch a client device here." Not yet done.
 
 ### The picture-display TV — still a stopgap
 

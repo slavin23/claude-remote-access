@@ -5,6 +5,24 @@ goes to site**. Earlier sessions ran elsewhere — a cloud session that could no
 the gateway, then a desktop at the shop. Claude Code transcripts do not sync between
 machines, so this file is the only thing that crosses over. Keep it current.
 
+## ⚠️ Needs a physical fix on the next site visit — both switches are offline
+
+**`restaurant` and `dispo` are both down right now (since 2026-09-07).** Nothing is
+damaged and nothing more can be done remotely — this needs one minute of hands-on
+cable work per switch. Full story and exact steps in "Completed 2026-09-07" below,
+short version:
+
+The uplinks were re-cabled (gateway ports 7/8 → each switch's port 24), but port 24
+on both switches still carried last session's client-only port profile from before it
+became an uplink — which blocks the switch's own management traffic. The corrected
+profile is saved in the controller for both, but a switch that's already cut off from
+the network can't download its own fix.
+
+**Fix, per switch:** briefly move the uplink cable to **port 1** (still has the old,
+working trunk config) → wait ~60 seconds for it to show Online → move it back to
+**port 24**, which will now have the corrected profile and come up in its intended
+spot. Do `restaurant` first, then `dispo`.
+
 ## Start here
 
 ```bash
@@ -145,6 +163,68 @@ and APs, because no port profile had ever been applied. It's now on `BAR-IOT-POR
   internal zone, allowed only to External) — not UniFi's built-in `DMZ` zone, which
   is for something the internet needs to reach inbound, the opposite of what a
   display TV needs. Raise this with Jason before building it.
+
+## Completed 2026-09-07 (via unifi.ui.com) — and an outage this created
+
+Jason re-cabled the gateway on site:
+
+| Gateway port | Now goes to | Was |
+|---|---|---|
+| Port 5 | Flex 2.5G PoE | Port 8 |
+| Port 6 | USP PDU Pro | Port 7 |
+| Port 7 | `restaurant` switch, **port 24** | Port 1 → `restaurant` port 1 |
+| Port 8 | `dispo` switch, **port 24** | Port 2 → `dispo` port 1 |
+
+Confirmed live in the controller's port table (physical link, LLDP-identified) — Flex
+and PDU came up clean on their new ports without any config change needed. The two
+switches did not.
+
+**Root cause:** on 2026-09-05, every port on both switches except the then-current
+uplink (port 1) was bulk-set to that tenant's `*-POS-PORT` profile — native VLAN
+10/20, all tagged traffic blocked. That was the right call at the time (nothing else
+was connected, see "Completed 2026-09-05" above). Nobody anticipated port 24
+specifically would become the new uplink two days later. The moment the cable moved,
+port 24's `BAR-POS-PORT`/`DISP-POS-PORT` profile cut the switch's own management
+traffic off entirely — it only passes untagged VLAN 10/20, and blocks everything
+tagged, including the switch's own control-plane traffic. **Both `restaurant` and
+`dispo` dropped off the controller and have been offline since.**
+
+Corrected in the controller:
+
+- Gateway Port 7 → `BAR-TRUNK`, Port 8 → `DISP-TRUNK` (took effect immediately —
+  the gateway is reachable)
+- `restaurant` port 24 → `BAR-TRUNK`, `dispo` port 24 → `DISP-TRUNK` (saved, but
+  **not yet applied to either switch** — see below)
+
+**Why it's still down: a deadlock, not a bug.** The corrected port-24 profile is
+queued in the controller for each switch, but a switch that's completely cut off
+from the network has no way to download its own fix. Nothing is broken or at risk
+by leaving it exactly as it is — this needs one minute of physical access, not
+a rebuild.
+
+**Recovery, per switch, next time someone's on site:**
+
+1. Move the uplink cable from **port 24 to port 1**. Port 1 still has the original
+   `BAR-TRUNK`/`DISP-TRUNK` profile from before the re-cabling, so this restores
+   contact immediately.
+2. Wait ~30–60 seconds for the switch to show **Online** in the controller — that's
+   it downloading the corrected port 24 profile.
+3. Move the cable back to **port 24.** It now has the right profile stored locally
+   and should come straight back up in its intended spot.
+
+Do `restaurant` first, confirm Online, then `dispo`. Neither switch needs a factory
+reset or re-adoption — this is purely getting one config change delivered.
+
+**Two unrelated things noticed while investigating, not touched:**
+
+- **Two APs are also showing Offline** — the ones at `10.0.1.239` and `10.0.1.169`,
+  both parented to the Flex 2.5G PoE switch (ports 6 and 4). Not connected to the
+  `restaurant`/`dispo` outage at all — worth a physical check (power, cable seating)
+  next time someone's on site, but not investigated further here.
+- **An unidentified device (`E100-f63 3f:63`) is plugged into gateway Port 2 on
+  MGMT** — the old `dispo` uplink port, now vacant of its switch. Worth asking
+  Jason what this is; a stray device sitting on the management network is worth
+  a name, not a mystery.
 
 ## The setup wizard — already done, nothing to do here
 

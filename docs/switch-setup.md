@@ -4,10 +4,18 @@ One switch per tenant: restaurant/bar on one, dispensary on the other. Both are
 **USW-24 (Standard 24), non-PoE**, 24x 1 GbE + 2x 1G SFP, with a **1.3" touchscreen
 LCM display** on the front.
 
-**Status as of 2026-09-05: naming, trunking, and a default access-port profile on
-every port are all done, remotely via unifi.ui.com. Still open: refine the default
-(POS profile everywhere) to match real drops as they're identified, physically move
-the TV to `dispo`, and the on-site ping tests.**
+**⚠️ Status as of 2026-09-07: both switches are OFFLINE, needs a physical fix on the
+next site visit.** The gateway was re-cabled — `restaurant` and `dispo` now uplink
+via port 24 instead of port 1 — but port 24 still carried the client-only profile
+from before it became an uplink, which blocks the switch's own management traffic.
+The corrected profile is saved in the controller but can't reach either switch while
+it's cut off. See "3b. The 2026-09-07 outage" below for the exact recovery steps —
+it's a one-minute cable swap per switch, no rebuild or reset needed.
+
+Naming, trunking, and a default access-port profile on every port were completed
+2026-09-05, remotely via unifi.ui.com. Still open beyond the outage above: refine
+the default (POS profile everywhere) to match real drops as they're identified,
+physically move the TV to `dispo`, and the on-site ping tests.
 
 ## First, the thing that is easy to get wrong
 
@@ -73,7 +81,9 @@ Neither trunk carries GUEST or STAFF — those are wireless VLANs, and the APs h
 to the Flex, not to these switches. If a tenant ever needs a wired guest jack, add
 GUEST to that one tenant's trunk deliberately; don't pre-authorise it on both.
 
-## 3. Uplinks — applied 2026-09-05, both ends
+## 3. Uplinks — applied 2026-09-05, superseded 2026-09-07
+
+Original wiring, both ends set to match:
 
 | Device | Port | Profile |
 |---|---|---|
@@ -84,6 +94,49 @@ GUEST to that one tenant's trunk deliberately; don't pre-authorise it on both.
 
 Verified after applying: all 11 devices on the site (both switches, all 5 APs, PDU,
 Flex, 5G Backup, gateway) stayed Online/Up to date through every change — no drop.
+
+**This wiring no longer reflects reality — see 3b.** Port 1 on each switch still
+carries this profile, unused now, and that turns out to matter: it's the way back
+in when a switch is cut off from its new uplink.
+
+## 3b. The 2026-09-07 re-cabling and outage
+
+Jason moved the gateway's cabling on site:
+
+| Gateway port | Now | Was |
+|---|---|---|
+| Port 5 | Flex 2.5G PoE | Port 8 |
+| Port 6 | USP PDU Pro | Port 7 |
+| Port 7 | `restaurant`, **port 24** | Port 1 → `restaurant` port 1 |
+| Port 8 | `dispo`, **port 24** | Port 2 → `dispo` port 1 |
+
+Flex and PDU came up clean on their new ports with no config change — their ports
+were already on default profiles that pass MGMT through. The two switches didn't,
+because **port 24 on each was still on that tenant's `*-POS-PORT` profile** from the
+2026-09-05 bulk default (§4) — native VLAN 10/20, all tagged traffic blocked. Fine
+for an empty access port; fatal for an uplink, since it also blocks the switch's own
+management traffic. Both switches dropped off the controller the moment the cable
+moved, and are still offline.
+
+Corrected in the controller: gateway Port 7 → `BAR-TRUNK`, Port 8 → `DISP-TRUNK`
+(live immediately, the gateway is reachable), `restaurant` port 24 → `BAR-TRUNK`,
+`dispo` port 24 → `DISP-TRUNK` (saved, but queued — neither switch can download it
+while it's the one thing cutting them off from the network. Not a bug, a deadlock).
+
+**Recovery, per switch — one minute, no reset or re-adoption:**
+
+1. Move the uplink cable from port 24 to **port 1** (still has the original working
+   trunk profile from §3 — this restores contact).
+2. Wait ~30–60 seconds for **Online** in the controller.
+3. Move the cable back to port 24 — it now has the corrected profile stored locally
+   and comes up in its intended spot.
+
+`restaurant` first, confirm Online, then `dispo`.
+
+**If this happens again:** before moving an uplink to a *different* physical port,
+set that port's profile to the matching trunk *first*, while the switch is still
+reachable on its current uplink. Changing the uplink port and the port's profile
+in the same visit is what created this outage.
 
 ## 4. Access ports — default applied to every remaining port, 2026-09-05
 
@@ -145,7 +198,8 @@ means nothing and "KDS — kitchen pass" means everything.
 ## 6. Verify before calling it done
 
 - [x] Both switches show their alias on the front LCM screen (`restaurant`, `dispo`)
-- [x] Both reachable, adopted, provisioned green
+- [ ] ~~Both reachable, adopted, provisioned green~~ — **both offline as of 2026-09-07,
+      see §3b for the one-minute fix needed on the next site visit**
 - [ ] Static/reserved MGMT IPs set on both switches
 - [x] No port anywhere is left on the default "All" profile — confirmed 2026-09-05
 - [ ] A laptop on a `BAR-POS-PORT` gets a **10.0.10.x** address

@@ -82,6 +82,37 @@ Verified live in the controller after applying: `dispo` Native VLAN counts read
 `MGMT (3)`, `OPEN-NET (11)`, `DISP-SECURE (12)`, and a laptop on `dispo` port 10
 came up on DISP-SECURE — the map is real, not just saved.
 
+### Named drops so far
+
+| Switch | Port | Label | Network |
+|---|---|---|---|
+| `dispo` | 14 | `ATM1` | OPEN-NET |
+| `dispo` | 16 | `ATM2` | OPEN-NET |
+| `dispo` | 18 | `ATM3` | OPEN-NET |
+| `dispo` | 20 | `ATM4` | OPEN-NET |
+
+Labeled 2026-09-09. The ATMs are a good fit for OPEN-NET: they need to reach their
+processor over the internet and nothing on either tenant's network, which is exactly
+what the `Open` zone allows and blocks.
+
+**Two caveats on these four, both open as of labeling:**
+
+- **None of the four had link when labeled.** The switch reported `In Use (2)` — port
+  10 (a laptop) and port 24 (the uplink) — with all four ATM ports showing Not
+  Connected. Cables are in the switch, but nothing on the far end is bringing the
+  link up. Check the far-end jack, the ATM's own port, and the patch run.
+- **They need static IPs.** OPEN-NET has no DHCP server by design, so an ATM plugged
+  in with DHCP expectations will land on a 169.254 address and look broken. Suggested
+  assignment, keyed to port number so the address tells you where it's patched:
+  `ATM1 10.0.150.14`, `ATM2 .16`, `ATM3 .18`, `ATM4 .20` — mask `255.255.255.0`,
+  gateway `10.0.150.1`, DNS `10.0.150.1`.
+
+**Worth deciding:** devices on OPEN-NET can reach each other at layer 2 — same VLAN,
+and there's no wired client isolation the way STAFF-WIFI has it at the SSID. Four
+ATMs that can see each other is probably not what you want long term. If it matters,
+the lever is `Settings → Networks → Device Isolation (ACL)`. Not enabled; raise it
+with Jason.
+
 **Why ports 13–23 have no DHCP:** that's deliberate, from Jason. The open network is
 for devices that need the internet and nothing else, addressed by hand so there's a
 written record of what's on it. A device plugged in there with DHCP expectations will

@@ -74,7 +74,7 @@ per-switch lookup.
 | Ports | Profile | What it's for |
 |---|---|---|
 | **1–12** | `BAR-SECURE-PORT` / `DISP-SECURE-PORT` | That tenant's private network. POS, back office, anything that matters. DHCP from 10.0.100.x / 10.0.200.x. |
-| **13–23** | `OPEN-PORT` | Internet-only. **No DHCP server** — every device here needs a hand-assigned static from Jason's plan. Fully firewalled off every internal network. |
+| **13–23** | `OPEN-PORT` | Internet-only, DHCP `10.0.150.50–200`. Fully firewalled off every internal network. |
 | **24** | `BAR-SECURE-TRUNK` / `DISP-SECURE-TRUNK` | The uplink to the gateway. |
 | **25–26 (SFP)** | untouched | Fiber, unused. |
 
@@ -95,17 +95,16 @@ Labeled 2026-09-09. The ATMs are a good fit for OPEN-NET: they need to reach the
 processor over the internet and nothing on either tenant's network, which is exactly
 what the `Open` zone allows and blocks.
 
-**Two caveats on these four, both open as of labeling:**
+**One caveat, still open:** none of the four had link when labeled. The switch
+reported `In Use (2)` — port 10 (a laptop) and port 24 (the uplink) — with all four
+ATM ports showing Not Connected. Cables are in the switch, but nothing on the far end
+is bringing the link up. Check the far-end jack, the ATM's own port, and the patch
+run. The ATMs will pull addresses from DHCP once they link; nothing needs configuring
+on them.
 
-- **None of the four had link when labeled.** The switch reported `In Use (2)` — port
-  10 (a laptop) and port 24 (the uplink) — with all four ATM ports showing Not
-  Connected. Cables are in the switch, but nothing on the far end is bringing the
-  link up. Check the far-end jack, the ATM's own port, and the patch run.
-- **They need static IPs.** OPEN-NET has no DHCP server by design, so an ATM plugged
-  in with DHCP expectations will land on a 169.254 address and look broken. Suggested
-  assignment, keyed to port number so the address tells you where it's patched:
-  `ATM1 10.0.150.14`, `ATM2 .16`, `ATM3 .18`, `ATM4 .20` — mask `255.255.255.0`,
-  gateway `10.0.150.1`, DNS `10.0.150.1`.
+Worth doing once they're up: give each a **DHCP reservation** off its MAC, so an ATM's
+address is stable for anything the processor whitelists, without hand-configuring the
+machine.
 
 **Worth deciding:** devices on OPEN-NET can reach each other at layer 2 — same VLAN,
 and there's no wired client isolation the way STAFF-WIFI has it at the SSID. Four
@@ -113,11 +112,14 @@ ATMs that can see each other is probably not what you want long term. If it matt
 the lever is `Settings → Networks → Device Isolation (ACL)`. Not enabled; raise it
 with Jason.
 
-**Why ports 13–23 have no DHCP:** that's deliberate, from Jason. The open network is
-for devices that need the internet and nothing else, addressed by hand so there's a
-written record of what's on it. A device plugged in there with DHCP expectations will
-sit at a 169.254 address and look broken — that's working as designed, give it a
-static.
+**DHCP on ports 13–23:** on, `10.0.150.50–10.0.150.200`, 24-hour lease, gateway and
+DNS both `10.0.150.1`, DHCP Guarding enabled. `.2–.49` and `.201–.254` are left free
+for statics and reservations.
+
+This was briefly configured as **no DHCP** — a misreading of "i have static ips",
+which turned out to mean the ISP's static WAN block, not hand-addressing devices on
+this network. Corrected 2026-09-09. If you find a device here on a 169.254 address,
+it predates the fix; renew its lease.
 
 ## 4. Gateway ports
 

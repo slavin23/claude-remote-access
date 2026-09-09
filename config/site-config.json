@@ -42,11 +42,11 @@
       "vlan": 150,
       "subnet": "10.0.150.1/24",
       "purpose": "corporate",
-      "dhcp": null,
+      "dhcp": { "start": "10.0.150.50", "stop": "10.0.150.200", "lease": 86400 },
       "zone": "Open",
       "wired": "both switches ports 13-23",
       "wifi": null,
-      "note": "Internet-only, wired only, no DHCP server - Jason assigns static addresses by hand (he has a static plan). Fully isolated from every internal network. 'corporate' purpose with explicit block policies rather than the 'guest' purpose, so the isolation is written down in the firewall and not implied by a network type."
+      "note": "Internet-only, wired only. Fully isolated from every internal network. 'corporate' purpose with explicit block policies rather than the 'guest' purpose, so the isolation is written down in the firewall and not implied by a network type. DHCP was initially set to None on a misreading of Jason's 'i have static ips' - he meant the ISP's static WAN block, not hand-addressing these devices. Corrected 2026-09-09: DHCP server on, .50-.200, leaving .2-.49 free for statics and reservations."
     },
     {
       "name": "SHARED-SECURE",
@@ -200,7 +200,7 @@
   "manual_steps": [
     "DONE 2026-09-09: six zones built, block-by-default between all of them, Allow Bar-Secure->Mgmt and Allow Disp-Secure->Mgmt added",
     "DONE 2026-09-09: Client Device Isolation ON for STAFF-WIFI, OFF for SHARED-SECURE-WIFI - both verified after save",
-    "DONE 2026-09-09: OPEN-NET DHCP set to None",
+    "DONE 2026-09-09: OPEN-NET DHCP server on, range .50-.200 (was briefly None - see the OPEN-NET note)",
     "OPEN: pin static IPs / DHCP reservations for both switches on MGMT - they hold dynamic leases today",
     "OPEN: lock the LCM touchscreens on both switches - they can factory-reset from the front panel and sit in public-facing rooms",
     "OPEN: AP Groups 'bar' and 'dispensary' - then scope BAR-SECURE-WIFI / DISP-SECURE-WIFI to them. This also buys back SSID headroom against the 4-per-band cap",

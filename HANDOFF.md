@@ -5,23 +5,26 @@ goes to site**. Earlier sessions ran elsewhere — a cloud session that could no
 the gateway, then a desktop at the shop. Claude Code transcripts do not sync between
 machines, so this file is the only thing that crosses over. Keep it current.
 
-## ⚠️ Needs a physical fix on the next site visit — both switches are offline
+## Status: the network was rebuilt from scratch on 2026-09-09 and is live
 
-**`restaurant` and `dispo` are both down right now (since 2026-09-07).** Nothing is
-damaged and nothing more can be done remotely — this needs one minute of hands-on
-cable work per switch. Full story and exact steps in "Completed 2026-09-07" below,
-short version:
+**Both switches are online. The outage is over. The old design is deleted.**
 
-The uplinks were re-cabled (gateway ports 7/8 → each switch's port 24), but port 24
-on both switches still carried last session's client-only port profile from before it
-became an uplink — which blocks the switch's own management traffic. The corrected
-profile is saved in the controller for both, but a switch that's already cut off from
-the network can't download its own fix.
+Everything below dated 2026-09-05 or 2026-09-07 is **history, not current
+configuration** — it describes a five-VLAN-per-tenant scheme that no longer exists in
+the controller. Read "Completed 2026-09-09 — the rebuild" for what's actually
+deployed. The older sections are kept because the reasoning in them still matters,
+and because one of them turned out to be wrong in an instructive way (see §"How the
+outage actually ended").
 
-**Fix, per switch:** briefly move the uplink cable to **port 1** (still has the old,
-working trunk config) → wait ~60 seconds for it to show Online → move it back to
-**port 24**, which will now have the corrected profile and come up in its intended
-spot. Do `restaurant` first, then `dispo`.
+Current shape, in one table:
+
+| | |
+|---|---|
+| **Networks** | MGMT (1), BAR-SECURE (100), DISP-SECURE (200), OPEN-NET (150), SHARED-SECURE (160), STAFF (170) |
+| **Wi-Fi** | BAR-SECURE-WIFI (hidden), DISP-SECURE-WIFI, SHARED-SECURE-WIFI, STAFF-WIFI (client-isolated) |
+| **Switch ports** | 1–12 = that tenant's secure VLAN · 13–23 = OPEN-NET, no DHCP · 24 = trunk uplink |
+| **Firewall** | 6 zones, block-by-default between all of them, internet allowed, plus Secure→Mgmt |
+| **WAN** | DHCP behind the Frontier modem. Static attempted twice, reverted — see 2026-09-09 WAN section |
 
 ## Start here
 
@@ -34,9 +37,8 @@ claude
 
 Opening message to paste:
 
-> Read HANDOFF.md, docs/unifi-bar-dispensary-design.md and docs/provisioning.md.
-> I'm on site with the UDM Pro. Walk me through the setup wizard, then provision
-> the VLANs.
+> Read HANDOFF.md and docs/switch-setup.md. The network was rebuilt 2026-09-09 and
+> is live — I'm on site to run the verification tests and finish the open items.
 
 ---
 
@@ -53,16 +55,19 @@ internet — assume there is none until you have made one.
 - [ ] **Bring a phone hotspot.** Claude Code needs to reach the API — it will not run
       on a site with no circuit. `docs/unifi-build.html` opens offline in a browser
       and is the field reference if you end up with no signal.
-- [ ] **Have the three Wi-Fi passphrases decided and written down.** They are
-      deliberately not in this repo — the script reads them from the environment:
-      `WIFI_STAFF_PSK`, `WIFI_BARPOS_PSK`, `WIFI_DISPPOS_PSK`.
+- [ ] **Know the Wi-Fi passphrase.** All four SSIDs share one, deliberately not in
+      this repo — anything scripted reads it from `WIFI_FIELDS_PSK`. Jason has it.
 - [ ] Ethernet port or a USB-C adapter, and a patch cable.
 
 ## The job
 
 One building split down the middle: **bar/restaurant** on one half, **dispensary** on
-the other. Two independent businesses, one ISP circuit, one gateway. They want a shared
-guest SSID and a shared staff SSID that must not become a shared network.
+the other. Two independent businesses, one ISP circuit, one gateway.
+
+As rebuilt 2026-09-09, each tenant gets exactly one private network they can manage,
+plus three shared ones that don't compromise that: an open internet-only wired
+network, a shared network where devices *are* meant to reach each other, and a staff
+Wi-Fi isolated device-from-device. The public guest SSID is gone.
 
 ## Hardware (confirmed, purchased)
 
@@ -81,26 +86,117 @@ WAN1 is 1 GbE so the circuit caps the site anyway. No DAC to buy.
 **Cameras are out of scope** — third-party system on its own Cradlepoint cellular
 circuit, never touches this network.
 
-## Current state — updated 2026-09-05
+## Completed 2026-09-09 — the rebuild
 
-The site is much further along than the previous handoff assumed. Gear is installed,
-and most of the earlier "next steps" are done:
+Jason asked to redo the whole thing from scratch: two secure networks (one per
+tenant), one open internet-only network on the back half of each switch, one shared
+network where devices *can* talk to each other, and a staff Wi-Fi isolated per
+device. Everything below was built and verified live through `unifi.ui.com`.
 
-- **Wizard complete.** Gateway is live at `10.0.1.1`, local admin exists, site is
-  named **Fields Cannary**.
-- **All 8 networks/VLANs exist and match `config/site-config.json` exactly** —
-  including the GUEST `/23` correction. Someone (a prior session or Jason) already
-  ran the networks half of `provision_unifi.py`, or built them by hand.
-- **Firewall zones and policies are built** — `Bar`, `Dispensary`, `Staff`, `Mgmt`
-  zones exist, and `Bar ⇄ Dispensary` is confirmed **blocked in both directions**
-  (verified live in the zone matrix, both IPv4/IPv6, all protocols).
-- **Both USW-24s are adopted, online, and each home-run to its own UDM Pro port** —
-  not daisy-chained. Named `restaurant` (→ UDM Port 1) and `dispo` (→ UDM Port 2).
-  Those names already show on the front LCM screens; no rename needed.
-- **Port profiles and trunking are done** — see "Completed 2026-09-05" below.
-- **Only `Fields Guest` SSID exists.** Staff, BAR-POS, and DISP-POS SSIDs are not
-  built yet, and AP groups `bar`/`dispensary` were not found — confirm before
-  running `--wlans`.
+**Why the VLAN IDs jumped to 100/150/160/170/200:** the new networks were built
+*alongside* the old ones and the old ones deleted last. Fresh IDs meant no collision
+during the overlap, and the ID now equals the subnet's third octet — `10.0.100.x` is
+VLAN 100 — so there's no lookup table to remember.
+
+### Networks
+
+| Name | VLAN | Subnet | DHCP | Notes |
+|---|---|---|---|---|
+| `MGMT` | 1 | 10.0.1.0/24 | yes | untouched by the rebuild |
+| `BAR-SECURE` | 100 | 10.0.100.0/24 | yes | the bar's one private network |
+| `DISP-SECURE` | 200 | 10.0.200.0/24 | yes | the dispensary's one private network |
+| `OPEN-NET` | 150 | 10.0.150.0/24 | **none** | internet-only, wired, hand-assigned statics |
+| `SHARED-SECURE` | 160 | 10.0.160.0/24 | yes | shared by both tenants, devices talk to each other |
+| `STAFF` | 170 | 10.0.170.0/24 | yes | staff phones, client-isolated at the SSID |
+
+### Switch ports — same map on both switches
+
+Ports **1–12** = that tenant's secure VLAN. Ports **13–23** = OPEN-NET. Port **24** =
+the trunk uplink. Full detail in `docs/switch-setup.md`.
+
+### Wi-Fi — four SSIDs, one passphrase
+
+| SSID | Network | Visible | Client isolation |
+|---|---|---|---|
+| `BAR-SECURE-WIFI` | BAR-SECURE | hidden | off |
+| `DISP-SECURE-WIFI` | DISP-SECURE | **visible** | off |
+| `SHARED-SECURE-WIFI` | SHARED-SECURE | visible | off |
+| `STAFF-WIFI` | STAFF | visible | **on** |
+
+All WPA2, 2.4 + 5 GHz, all APs. DISP-SECURE-WIFI was un-hidden at Jason's request so
+it could be joined from the list on site — the bar's equivalent is still hidden, so
+the two tenants deliberately differ here.
+
+**Hard constraint found the hard way: these U7 Pro XG APs cap at 4 SSIDs per radio
+band.** Creating STAFF-WIFI was refused outright ("You've reached the limit of WiFi
+networks per AP for 5 GHz Band") until `Fields Guest` was deleted. The site is now at
+exactly 4 of 4. A fifth SSID means removing one, or building the `bar` /
+`dispensary` AP groups so no single AP carries more than four.
+
+### Firewall — 6 zones, block by default
+
+Zones: `Mgmt`, `Bar-Secure`, `Disp-Secure`, `Open`, `Shared`, `Staff`, one network
+each. UniFi blocks traffic between new custom zones by default and allows External,
+which is most of the design for free. Two policies were added by hand:
+
+- **Allow Bar-Secure → Mgmt**
+- **Allow Disp-Secure → Mgmt**
+
+Those two exist for Jason's "so I can access to manage it" — a laptop on either
+tenant's secure ports can reach the controller. Return traffic is auto-generated.
+Everything else between zones is Block All, verified in the zone matrix:
+Bar-Secure ⇄ Disp-Secure blocked both ways, Open/Shared/Staff blocked to every
+internal zone and allowed only to External.
+
+**One thing that looks alarming in the matrix and isn't:** the diagonal (a zone to
+itself) reads `Block All`. That governs *routed* traffic between different networks
+in the same zone — and every zone here holds exactly one network. Devices on the same
+VLAN talk to each other by switching, which never reaches the gateway firewall. So
+SHARED-SECURE still does what it exists for.
+
+### Torn down
+
+Deleted after the new build was verified: networks `BAR-POS`, `BAR-BACK`, `BAR-IOT`,
+`DISP-POS`, `DISP-BACK`, `GUEST`, `STAFF`(31); the `Fields Guest` SSID; nine port
+profiles (`BAR-TRUNK`, `DISP-TRUNK`, and every `*-POS-PORT` / `*-BACK-PORT` /
+`*-IOT-PORT` / `*-IDLE-PORT`); zones `Bar`, `Dispensary`, `Staff`.
+
+Two ordering notes that will save someone an hour:
+
+1. **Delete port profiles before networks.** A profile referencing a network blocks
+   that network's deletion.
+2. **Turning a gateway port's profile off does not clear its tagged VLAN list.**
+   Gateway ports 1 and 2 kept BAR-POS/BAR-BACK/BAR-IOT as tagged VLANs after the
+   profile toggle went off; they had to be explicitly set to **Tagged VLAN
+   Management = Block All** before those networks would delete.
+3. The old `STAFF` (VLAN 31) and the new `STAFF` (VLAN 170) had the same name, and
+   the network picker only shows names. The old one was renamed `STAFF-OLD` first —
+   worth doing any time two same-named objects coexist during a migration.
+
+### How the outage actually ended
+
+The 2026-09-07 sections below say both switches were offline and needed a physical
+cable swap (port 24 → port 1 → back). **That swap was never performed.** On
+2026-09-09 both switches were online with ~1d 18h uptime, uplinked on port 24,
+`dispo` holding `10.0.1.238`, and a laptop on `dispo` port 10 live on DISP-SECURE.
+
+Either they were never as offline as the device page claimed — it kept showing
+"dispo (Offline), last connected Aug 30" while clients behind it were passing
+traffic — or applying the new Infrastructure-mode trunks to gateway ports 7 and 8 was
+sufficient on its own, since a trunk passes untagged MGMT and that's all a switch
+needs to phone home. **Don't trust a stale Offline label; cross-check whether clients
+behind the device are moving traffic.**
+
+The genuinely durable lesson from that outage is unchanged: **before moving an uplink
+to a different physical port, set that port's profile to the matching trunk first,
+while the switch is still reachable on its current uplink.**
+
+---
+
+## History — 2026-09-05 and 2026-09-07 (superseded, kept for reasoning)
+
+Everything from here to the WAN section describes the **old** design. None of these
+VLANs, profiles or zones exist any more.
 
 **Remote access works for hand-configuration.** Everything below was done through
 `unifi.ui.com`'s cloud console, from a machine with no LAN route to the site at all.
@@ -349,65 +445,51 @@ LAN subnet, auto-optimize off, local admin). **All of that is done** — confirm
 Leaving this note so a cold session doesn't re-walk the wizard or second-guess the
 subnet.
 
-## Then provision — WLANs are the remaining piece
+## Provisioning script — now behind the deployed state
 
-The networks half is already done — all 8 VLANs exist and match `site-config.json`.
-Only the WLANs are left, and only `Fields Guest` exists so far.
+`scripts/provision_unifi.py` still describes the **old** eight-VLAN design and would
+try to recreate networks that were deliberately deleted. **Do not run it against this
+site** until it's rewritten against the current `config/site-config.json`. The whole
+rebuild was done by hand through the cloud console, which is the only path that works
+without being on the site LAN anyway.
 
-**Create the AP groups `bar` and `dispensary` in the UI first** — not found as of
-2026-09-05. The POS SSIDs are silently skipped without them.
+Firewall zones and policies were never scripted and shouldn't be — build them by hand.
 
-```bash
-export UNIFI_PASSWORD='...'
-export WIFI_STAFF_PSK='...' WIFI_BARPOS_PSK='...' WIFI_DISPPOS_PSK='...'
+## What's left
 
-# dry run first — this is the default, nothing is written. Re-running against
-# networks that already exist is safe: the script skips anything whose name matches.
-python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin --wlans
+Nothing blocking. These are the finishing items, in rough priority order:
 
-# then apply
-python3 scripts/provision_unifi.py --host 10.0.1.1 --username admin --apply --wlans
-```
-
-Firewall zones and policies are deliberately **not** scripted — build them by hand. The
-script prints the full worklist at the end of every run.
-
-Back up the site once it looks right.
-
-## Changed since the last handoff
-
-- **GUEST is `10.0.30.0/23`, not /22.** `10.0.30.0/22` is not a valid network boundary —
-  it normalises to `10.0.28.0/22` and the controller rejects a DHCP range starting at
-  `10.0.30.10`. The /23 spans `10.0.30.0`–`10.0.31.255`, 510 usable. DHCP range now
-  ends at `10.0.31.250`.
-- **DISP-CAM (VLAN 22) is no longer created.** Network, `Cameras` zone and both camera
-  firewall policies are out of `site-config.json`, since surveillance lives on its own
-  Cradlepoint. VLAN 22 stays *reserved on paper* — §7 of the design doc still has the
-  policy written for the day it ever moves onto this circuit.
-- **Guest SSID renamed `Venue Guest` → `Fields Guest`.**
-- Design doc, `provisioning.md` and `unifi-build.html` all updated to match.
-
-## Open — decide these on site
-
-1. **The staff SSID is still named `Venue Staff` in the config.** The guest rename went
-   through, this one did not. Before applying `--wlans`, decide what a *shared* staff
-   SSID across two unaffiliated businesses should be called — "Fields Staff" is only
-   right if Fields is the building, not just the bar.
-2. **RADIUS or PSK for staff.** The design calls for WPA-Enterprise with dynamic VLAN
-   (bar accounts → VLAN 11, dispensary → VLAN 21). The PSK in the config is the
-   fallback. If it goes PSK, VLAN 31 must be internet-only — see §5.
-3. **Create AP groups `bar` and `dispensary`** before running `--wlans` — not found
-   as of 2026-09-05. The POS SSIDs are skipped without them.
-4. **Build the remaining SSIDs** — only `Fields Guest` exists so far. Staff, BAR-POS,
-   and DISP-POS are still to create.
-5. **Move the misplaced picture-display TV** from `restaurant` port 3 to the `dispo`
-   switch once its cable is run there, and set that port to `DISP-BACK-PORT`. See
-   "Completed 2026-09-05" above for the full story and the signage-zone recommendation
-   that's waiting on Jason's go-ahead.
-6. **Refine the default port assignment as each drop gets wired.** Every port on both
-   switches now has a safe idle default (`*-IDLE-PORT` — MGMT-reachable, no tenant
-   bridging, see "Completed 2026-09-07 (continued)"), not the real map. Move office drops to `*-BACK-PORT` and bar
-   TV/menu-board drops to `BAR-IOT-PORT` as they're identified.
+1. **The two-laptop ping tests, both directions.** This is the whole build in one
+   check and it needs someone physically on site. A laptop on `restaurant` ports 1–12
+   must get `10.0.100.x`; one on `dispo` ports 1–12 must get `10.0.200.x`; each must
+   **fail** to ping the other, in **both** directions — a one-way block is a
+   misconfiguration that looks like success. Also confirm a laptop on ports 13–23
+   (given a static `10.0.150.x`) reaches the internet and can't reach anything
+   internal, and that a laptop on ports 1–12 *can* reach `10.0.1.1`.
+2. **Pin static IPs / DHCP reservations for both switches** on MGMT. They hold
+   dynamic leases today, so the IP on the LCM screen can go stale.
+3. **Lock the LCM touchscreens.** Both switches sit in public-facing rooms and the
+   front panel can factory-reset them.
+4. **Build AP groups `bar` and `dispensary`** and scope the two hidden secure SSIDs
+   to them. Beyond being tidier, this is what buys back headroom against the
+   4-SSIDs-per-band cap.
+5. **The picture-display TV moved networks without anyone touching it.** It's on
+   `restaurant` port 3, which used to be `BAR-IOT-PORT` and is now — like all of
+   ports 1–12 — `BAR-SECURE-PORT`. So a public-facing display TV now sits on the
+   bar's *private* network. That's a downgrade in posture from where it was, and the
+   old recommendation still stands: it's cabled to the wrong switch (Jason says it
+   belongs on `dispo`), and low-trust signage really wants its own low-trust home.
+   Cheapest fix in the current design: move it to any port in **13–23** and give it a
+   static — OPEN-NET is exactly "internet, nothing else," which is all a display TV
+   needs. Decide with Jason.
+6. **Identify the device on gateway port 2** (`E100-f63 3f:63`, Comcast OUI, sitting
+   on MGMT). A stray device on the management network deserves a name.
+6. **Two APs were showing offline** as of 2026-09-07 (`10.0.1.239`, `10.0.1.169`,
+   both on the Flex). Worth a physical check — power and cable seating.
+7. **DHCP guard**, **5G failover scoping** (exclude OPEN-NET and STAFF; the eSIM has
+   a 10 GB cap), and an **RF tuning pass**. See `manual_steps` in the config.
+8. **Back up the site** once the ping tests pass.
+9. **Retry the WAN static** — but settle the Frontier modem question first, below.
 
 ## Things a cold session should know
 
@@ -416,19 +498,41 @@ Back up the site once it looks right.
 - **SSH is diagnostic, not provisioning.** UniFi OS regenerates device config on every
   provision cycle and overwrites hand edits.
 - **The script must run from a machine on the site LAN.** There is no remote path in.
-- **STAFF is at `10.0.40.0/24`, not 10.0.31.x.** The guest /23 spans
-  10.0.30.0-10.0.31.255 and would swallow it. VLAN ID is still 31.
+  The interactive cloud console has no such restriction — the entire rebuild was done
+  through it from off-site.
+- **VLAN ID = the subnet's third octet** in the current design. 10.0.100.x is VLAN
+  100, 10.0.200.x is VLAN 200. No lookup table.
+- **4 SSIDs per radio band is a hard AP limit**, and the site is at 4. See the
+  rebuild section.
+- **UI quirks worth knowing**, all hit during the rebuild: the Advanced toggle must
+  be flipped Auto → Manual before several controls accept a click; the netmask picker
+  displays a value its state didn't take (type it instead); a `Select VLANs` dialog
+  can open at a slightly different offset the second time, so screenshot-verify
+  before saving; and applying a profile to a multi-port selection is a silent no-op
+  if the anchor port already has that profile.
 
 ## Files
 
+**Current — trust these:**
+
+```
+HANDOFF.md                            this file
+config/site-config.json               the design as data — source of truth, matches the controller
+docs/switch-setup.md                  the two USW-24s: port map, profiles, verification checklist
+```
+
+**Stale — describe the pre-2026-09-09 design, not yet rewritten:**
+
 ```
 docs/unifi-bar-dispensary-design.md   full design, sections 0-10
-docs/switch-setup.md                  the two USW-24s: naming, LCM screens, port profiles
 docs/provisioning.md                  how the script works, what is manual
-docs/unifi-build.html                 same design as a field reference page, works offline
-config/site-config.json               the design as data — source of truth
-scripts/provision_unifi.py            creates VLANs and WLANs via the controller API
+docs/unifi-build.html                 offline field reference page
+scripts/provision_unifi.py            would recreate deleted networks — do not run
 ```
+
+Rewriting those three docs and the script against the new design is the main
+outstanding documentation task. `site-config.json` and `switch-setup.md` are enough
+to work from in the meantime.
 
 Published reference page:
 https://claude.ai/code/artifact/3e8596c7-6306-4f7b-bb17-26f91a8f4fdf

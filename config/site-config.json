@@ -94,10 +94,10 @@
       "wpa_mode": "wpa2",
       "passphrase_env": "WIFI_FIELDS_PSK",
       "bands": ["2g", "5g"],
-      "hide_ssid": true,
+      "hide_ssid": false,
       "ap_group": "all",
       "client_isolation": false,
-      "note": "Wireless leg of the dispensary's private network. Hidden. Scope to a 'dispensary' AP group once one exists."
+      "note": "Wireless leg of the dispensary's private network. Un-hidden 2026-09-09 at Jason's request so it can be joined from the SSID list on site - BAR-SECURE-WIFI is still hidden, so the two tenants deliberately differ here. Scope to a 'dispensary' AP group once one exists."
     },
     {
       "name": "SHARED-SECURE-WIFI",
@@ -171,21 +171,43 @@
 
   "wan": {
     "interface": "WAN1 (gateway port 9, Frontier)",
-    "mode": "static",
-    "address": "65.73.117.54/30",
-    "gateway": "65.73.117.53",
-    "dns": ["74.40.74.40", "74.40.74.41"],
-    "failover": "WAN3 UniFi 5G backup, already configured, Online",
-    "note": "Applied 2026-09-09, came up first try. No static-then-DHCP auto-fallback exists on a single WAN; manual fallback is Settings > Internet > Internet 1 > IPv4 > DHCP."
+    "mode": "dhcp",
+    "address": "192.168.254.42 (leased from the Frontier modem)",
+    "dns": "auto",
+    "failover": "WAN3 UniFi 5G backup, configured, 10 GB monthly cap",
+    "note": "Reverted to DHCP 2026-09-09 after two static attempts failed - see HANDOFF.md. The leased address is private, which means the modem is in router/NAT mode; a public static on the UDM's WAN needs Frontier to put it in bridge/IP-passthrough first, or to route the block to the modem's LAN side. Ask Frontier before retrying. There is no static-then-DHCP auto-fallback on a single WAN - the fallback is manual, at Settings > Internet > Internet 1 > IPv4 > DHCP.",
+    "static_to_retry": {
+      "address": "65.73.117.49/24",
+      "gateway": "65.73.117.1",
+      "dns": ["74.40.74.40", "74.40.74.41"],
+      "note": "Jason's second set. Looks like a real routed assignment. Never cleanly applied - the netmask picker displayed 24 while its state stayed 30. Type the netmask, don't pick it."
+    }
+  },
+
+  "constraints": {
+    "ssids_per_band": 4,
+    "note": "The U7 Pro XG APs cap at 4 SSIDs per radio band. The four WLANs above are exactly at that limit - adding a fifth requires removing one, or scoping SSIDs to per-tenant AP groups so no single AP carries more than four. This is what forced the Fields Guest teardown before STAFF-WIFI could be created."
+  },
+
+  "removed_2026_09_09": {
+    "note": "The previous design was torn down after the new one was verified live. Recorded so nobody goes looking for these in the controller.",
+    "networks": ["BAR-POS (10)", "BAR-BACK (11)", "BAR-IOT (12)", "DISP-POS (20)", "DISP-BACK (21)", "GUEST (30)", "STAFF (31, renamed STAFF-OLD before deletion to disambiguate from the new STAFF/170)"],
+    "port_profiles": ["BAR-TRUNK", "DISP-TRUNK", "BAR-POS-PORT", "BAR-BACK-PORT", "BAR-IOT-PORT", "DISP-POS-PORT", "DISP-BACK-PORT", "BAR-IDLE-PORT", "DISP-IDLE-PORT"],
+    "wlans": ["Fields Guest"],
+    "zones": ["Bar", "Dispensary", "Staff-Old"]
   },
 
   "manual_steps": [
-    "Zone-based firewall: create the six zones, then the policies above - explicit block between every pair that should not talk, do not rely on defaults",
-    "Client Device Isolation ON for STAFF-WIFI, OFF for SHARED-SECURE-WIFI - check it, the UI default varies",
-    "OPEN-NET: DHCP server OFF. Devices get static addresses from Jason's plan",
-    "AP Groups 'bar' and 'dispensary' - then scope BAR-SECURE-WIFI / DISP-SECURE-WIFI to them",
-    "DHCP guard with trusted server addresses on every network that has a DHCP server",
-    "5G Backup failover scoping - secure networks allowed, OPEN-NET and STAFF excluded, alert under 10 GB",
-    "RF tuning pass: 5 GHz at 40 MHz, min RSSI -72, low data rates disabled, TX power medium"
+    "DONE 2026-09-09: six zones built, block-by-default between all of them, Allow Bar-Secure->Mgmt and Allow Disp-Secure->Mgmt added",
+    "DONE 2026-09-09: Client Device Isolation ON for STAFF-WIFI, OFF for SHARED-SECURE-WIFI - both verified after save",
+    "DONE 2026-09-09: OPEN-NET DHCP set to None",
+    "OPEN: pin static IPs / DHCP reservations for both switches on MGMT - they hold dynamic leases today",
+    "OPEN: lock the LCM touchscreens on both switches - they can factory-reset from the front panel and sit in public-facing rooms",
+    "OPEN: AP Groups 'bar' and 'dispensary' - then scope BAR-SECURE-WIFI / DISP-SECURE-WIFI to them. This also buys back SSID headroom against the 4-per-band cap",
+    "OPEN: DHCP guard with trusted server addresses on every network that has a DHCP server",
+    "OPEN: 5G Backup failover scoping - secure networks allowed, OPEN-NET and STAFF excluded, alert under 10 GB",
+    "OPEN: RF tuning pass: 5 GHz at 40 MHz, min RSSI -72, low data rates disabled, TX power medium",
+    "OPEN: the two-laptop ping tests, both directions - the whole build in one check, needs someone on site",
+    "OPEN: back up the site once the ping tests pass"
   ]
 }

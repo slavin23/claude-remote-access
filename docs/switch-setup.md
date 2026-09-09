@@ -4,23 +4,14 @@ One switch per tenant: restaurant/bar on one, dispensary on the other. Both are
 **USW-24 (Standard 24), non-PoE**, 24x 1 GbE + 2x 1G SFP, with a **1.3" touchscreen
 LCM display** on the front.
 
-**⚠️ Status as of 2026-09-07: both switches are OFFLINE, needs a physical fix on the
-next site visit.** The gateway was re-cabled — `restaurant` and `dispo` now uplink
-via port 24 instead of port 1 — but port 24 still carried the client-only profile
-from before it became an uplink, which blocks the switch's own management traffic.
-The corrected profile is saved in the controller but can't reach either switch while
-it's cut off. See "3b. The 2026-09-07 outage" below for the exact recovery steps —
-it's a one-minute cable swap per switch, no rebuild or reset needed.
+**Status as of 2026-09-09: both switches are online and running the rebuilt design.**
+The 2026-09-07 outage is over — see §6 for what actually resolved it, because the
+recorded cause and the recorded fix were both partly wrong and that's worth knowing.
 
-**Also done 2026-09-07, while still offline:** every non-trunk, non-TV port on both
-switches moved from `*-POS-PORT` to a new `*-IDLE-PORT` default — MGMT-reachable,
-still zero cross-tenant bridging — so a future cable landing on an unused port can't
-repeat this outage. See §4b.
-
-Naming, trunking, and a default access-port profile on every port were completed
-2026-09-05, remotely via unifi.ui.com. Still open beyond the outage above: refine
-the default (POS profile everywhere) to match real drops as they're identified,
-physically move the TV to `dispo`, and the on-site ping tests.
+This document describes the **rebuilt** design (2026-09-09). Everything before it —
+the five-VLAN-per-tenant scheme, the `*-POS-PORT` / `*-BACK-PORT` / `*-IOT-PORT` /
+`*-IDLE-PORT` profiles, `BAR-TRUNK` / `DISP-TRUNK` — is **deleted**, not deprecated.
+Don't go looking for it in the controller.
 
 ## First, the thing that is easy to get wrong
 
@@ -30,208 +21,94 @@ the controller reaches them.
 
 The tenant separation happens on the **ports**:
 
-- **The uplink trunk carries only that tenant's VLANs.** The dispensary's VLANs never
-  traverse the bar's uplink cable, and vice versa.
-- **Every access port has a single untagged VLAN.** No port is left on the default
-  "All" profile — that is the leak.
+- **The uplink trunk carries only that tenant's VLANs** (plus MGMT and OPEN-NET). The
+  dispensary's secure VLAN never traverses the bar's uplink cable, and vice versa.
+- **Every access port has a single untagged VLAN and blocks all tagged traffic.**
+  No port is left on the factory "All" profile — that is the leak.
 
 This is stronger than the zone firewall alone. The firewall stops routed traffic
-between zones; the trunk allow-list means the frames are not on the wire in the first
-place.
+between zones; the trunk allow-list means the frames are not on the wire in the
+first place.
 
-## Before touching the controller
+## 1. Naming — on the LCM screens, unchanged
 
-- [x] **Each switch has its own cable home to the UDM Pro.** Confirmed 2026-09-05 —
-      `restaurant` → UDM Pro Port 1, `dispo` → UDM Pro Port 2. Not daisy-chained.
-- [x] Which UDM Pro LAN port feeds which switch — see above.
-- [x] Both switches online, adopted, provisioned.
-
-## 1. Naming — done, already on the LCM screens
-
-The front display renders the device **Alias**, and the switches were already named
-before this session touched anything:
-
-| Switch | Alias in use | UDM Pro port |
-|---|---|---|
-| Restaurant / bar side | `restaurant` | Port 1 |
-| Dispensary side | `dispo` | Port 2 |
-
-These names already show on each switch's LCM screen — no rename needed. (An earlier
-draft of this doc proposed `BAR-SW24`/`DISP-SW24`; ignore that, the names above are
-what's actually deployed and there's no reason to churn a working alias.)
-
-**Not yet done:**
-- **Static IP or DHCP reservation.** Both switches are on dynamic MGMT leases today
-  (`restaurant` = `10.0.1.51`, `dispo` = `10.0.1.238` as of 2026-09-05). Fine for now,
-  but a lease can change — pin these before calling the build final, so the LCM
-  screen's IP stays trustworthy.
-- **LCM lock.** Both switches sit in public-facing spaces. The screen is a touchscreen
-  that can factory-reset the switch from the front panel — lock it before handover.
-
-## 2. Port profiles — created 2026-09-05
-
-All seven exist in `Settings → Networks → Port Profiles`:
-
-| Profile | Mode | Native VLAN | Tagged VLANs |
+| Switch | Alias in use | Gateway port | Uplink port on switch |
 |---|---|---|---|
-| `BAR-TRUNK` | Infrastructure | MGMT (1) | BAR-POS (10), BAR-BACK (11), BAR-IOT (12) |
-| `DISP-TRUNK` | Infrastructure | MGMT (1) | DISP-POS (20), DISP-BACK (21) |
-| `BAR-POS-PORT` | Edge | BAR-POS (10) | none (Block All) |
-| `BAR-BACK-PORT` | Edge | BAR-BACK (11) | none (Block All) |
-| `BAR-IOT-PORT` | Edge | BAR-IOT (12) | none (Block All) |
-| `DISP-POS-PORT` | Edge | DISP-POS (20) | none (Block All) |
-| `DISP-BACK-PORT` | Edge | DISP-BACK (21) | none (Block All) |
+| Restaurant / bar side | `restaurant` | Port 7 | **Port 24** |
+| Dispensary side | `dispo` | Port 8 | **Port 24** |
 
-Neither trunk carries GUEST or STAFF — those are wireless VLANs, and the APs home-run
-to the Flex, not to these switches. If a tenant ever needs a wired guest jack, add
-GUEST to that one tenant's trunk deliberately; don't pre-authorise it on both.
+Both names show on their front LCM screens already. No rename needed.
 
-## 3. Uplinks — applied 2026-09-05, superseded 2026-09-07
+**Still not done:**
+- **Static IP or DHCP reservation.** Both are on dynamic MGMT leases (`dispo` =
+  `10.0.1.238` as of 2026-09-09). Pin these before calling the build final, so the
+  LCM screen's IP stays trustworthy.
+- **LCM lock.** Both sit in public-facing spaces. The touchscreen can factory-reset
+  the switch from the front panel. Lock it before handover.
 
-Original wiring, both ends set to match:
+## 2. Port profiles — the five that exist
 
-| Device | Port | Profile |
+`Settings → Networks → Port Profiles`. These five are the complete set:
+
+| Profile | Mode | Native VLAN | Tagged VLANs | Used on |
+|---|---|---|---|---|
+| `BAR-SECURE-TRUNK` | Infrastructure | MGMT (1) | BAR-SECURE (100), OPEN-NET (150) | gateway port 7, `restaurant` port 24 |
+| `DISP-SECURE-TRUNK` | Infrastructure | MGMT (1) | DISP-SECURE (200), OPEN-NET (150) | gateway port 8, `dispo` port 24 |
+| `BAR-SECURE-PORT` | Edge | BAR-SECURE (100) | Block All | `restaurant` ports 1–12 |
+| `DISP-SECURE-PORT` | Edge | DISP-SECURE (200) | Block All | `dispo` ports 1–12 |
+| `OPEN-PORT` | Edge | OPEN-NET (150) | Block All | both switches, ports 13–23 |
+
+Neither trunk carries SHARED-SECURE or STAFF — those are wireless-only VLANs, and
+the APs home-run to the Flex, not to these switches.
+
+**Note the trunks are asymmetric on purpose.** `BAR-SECURE-TRUNK` carries VLAN 100
+but not 200; `DISP-SECURE-TRUNK` carries 200 but not 100. Each tenant's secure VLAN
+is physically absent from the other tenant's uplink cable. Both carry OPEN-NET,
+because ports 13–23 on both switches serve it.
+
+## 3. The port map
+
+Identical on both switches, which is the point — one rule to remember, not a
+per-switch lookup.
+
+| Ports | Profile | What it's for |
 |---|---|---|
-| UDM Pro | Port 1 (→ `restaurant`) | `BAR-TRUNK` |
-| `restaurant` | Port 1 (uplink) | `BAR-TRUNK` |
-| UDM Pro | Port 2 (→ `dispo`) | `DISP-TRUNK` |
-| `dispo` | Port 1 (uplink) | `DISP-TRUNK` |
+| **1–12** | `BAR-SECURE-PORT` / `DISP-SECURE-PORT` | That tenant's private network. POS, back office, anything that matters. DHCP from 10.0.100.x / 10.0.200.x. |
+| **13–23** | `OPEN-PORT` | Internet-only. **No DHCP server** — every device here needs a hand-assigned static from Jason's plan. Fully firewalled off every internal network. |
+| **24** | `BAR-SECURE-TRUNK` / `DISP-SECURE-TRUNK` | The uplink to the gateway. |
+| **25–26 (SFP)** | untouched | Fiber, unused. |
 
-Verified after applying: all 11 devices on the site (both switches, all 5 APs, PDU,
-Flex, 5G Backup, gateway) stayed Online/Up to date through every change — no drop.
+Verified live in the controller after applying: `dispo` Native VLAN counts read
+`MGMT (3)`, `OPEN-NET (11)`, `DISP-SECURE (12)`, and a laptop on `dispo` port 10
+came up on DISP-SECURE — the map is real, not just saved.
 
-**This wiring no longer reflects reality — see 3b.** Port 1 on each switch still
-carries this profile, unused now, and that turns out to matter: it's the way back
-in when a switch is cut off from its new uplink.
+**Why ports 13–23 have no DHCP:** that's deliberate, from Jason. The open network is
+for devices that need the internet and nothing else, addressed by hand so there's a
+written record of what's on it. A device plugged in there with DHCP expectations will
+sit at a 169.254 address and look broken — that's working as designed, give it a
+static.
 
-## 3b. The 2026-09-07 re-cabling and outage
+## 4. Gateway ports
 
-Jason moved the gateway's cabling on site:
-
-| Gateway port | Now | Was |
+| Gateway port | Goes to | Profile |
 |---|---|---|
-| Port 5 | Flex 2.5G PoE | Port 8 |
-| Port 6 | USP PDU Pro | Port 7 |
-| Port 7 | `restaurant`, **port 24** | Port 1 → `restaurant` port 1 |
-| Port 8 | `dispo`, **port 24** | Port 2 → `dispo` port 1 |
+| Port 5 | Flex 2.5G PoE | default (untouched) |
+| Port 6 | USP PDU Pro | default (untouched) |
+| Port 7 | `restaurant` port 24 | `BAR-SECURE-TRUNK` |
+| Port 8 | `dispo` port 24 | `DISP-SECURE-TRUNK` |
+| Port 9 | Frontier WAN | — |
 
-Flex and PDU came up clean on their new ports with no config change — their ports
-were already on default profiles that pass MGMT through. The two switches didn't,
-because **port 24 on each was still on that tenant's `*-POS-PORT` profile** from the
-2026-09-05 bulk default (§4) — native VLAN 10/20, all tagged traffic blocked. Fine
-for an empty access port; fatal for an uplink, since it also blocks the switch's own
-management traffic. Both switches dropped off the controller the moment the cable
-moved, and are still offline.
+**Ports 1 and 2 were reset on 2026-09-09.** They carried the old `BAR-TRUNK` /
+`DISP-TRUNK` profiles from when the switches uplinked there. Both are now: profile
+off, native VLAN MGMT, **Tagged VLAN Management = Block All**. That last part
+mattered — switching the profile off left the old tagged VLAN list (BAR-POS,
+BAR-BACK, BAR-IOT) sitting on the port, which would have blocked deleting those
+networks. If you ever retire a network and the controller refuses, this is where to
+look first.
 
-Corrected in the controller: gateway Port 7 → `BAR-TRUNK`, Port 8 → `DISP-TRUNK`
-(live immediately, the gateway is reachable), `restaurant` port 24 → `BAR-TRUNK`,
-`dispo` port 24 → `DISP-TRUNK` (saved, but queued — neither switch can download it
-while it's the one thing cutting them off from the network. Not a bug, a deadlock).
-
-**Recovery, per switch — one minute, no reset or re-adoption:**
-
-1. Move the uplink cable from port 24 to **port 1** (still has the original working
-   trunk profile from §3 — this restores contact).
-2. Wait ~30–60 seconds for **Online** in the controller.
-3. Move the cable back to port 24 — it now has the corrected profile stored locally
-   and comes up in its intended spot.
-
-`restaurant` first, confirm Online, then `dispo`.
-
-**If this happens again:** before moving an uplink to a *different* physical port,
-set that port's profile to the matching trunk *first*, while the switch is still
-reachable on its current uplink. Changing the uplink port and the port's profile
-in the same visit is what created this outage.
-
-## 4. Access ports — default applied to every remaining port, 2026-09-05
-
-No physical drop map exists yet, but nothing else was connected either, so every
-unused port on both switches was bulk-set to that tenant's primary profile — the
-safe baseline the earlier draft of this doc recommended, applied now that it was
-confirmed low-risk (nothing live to disrupt):
-
-| Switch | Ports | Profile applied |
-|---|---|---|
-| `restaurant` | 2, 4–24 (22 ports) | `BAR-POS-PORT` |
-| `dispo` | 2–24 (23 ports) | `DISP-POS-PORT` |
-
-Left alone on purpose:
-- **Port 1 on both** — already `BAR-TRUNK` / `DISP-TRUNK`, the uplinks.
-- **`restaurant` port 3** — the picture-display TV, see below.
-- **SFP+ 25/26 on both** — fiber uplink ports, not RJ45 access ports. No profile
-  applied; nothing plugs into them today.
-
-Verified after applying: all 11 devices on the site stayed Online/Up to date. `dispo`
-briefly showed "Getting Ready" while it pushed 23 port configs, then settled back to
-normal — expected, not a fault.
-
-**This is a starting default, not the finished map.** As real drops get identified,
-move each one off `*-POS-PORT` to the profile that actually matches it:
-
-- **`restaurant`:** office drops → `BAR-BACK-PORT`, TV/menu-board drops →
-  `BAR-IOT-PORT`
-- **`dispo`:** office and vault-room drops → `DISP-BACK-PORT`
-
-Anything that ends up genuinely unused once the build is done: **disable the port.**
-An empty live jack in a public bar is a way onto the POS VLAN.
-
-## 4b. Idle-port hardening — 2026-09-07, in response to the §3b outage
-
-Jason's reaction to the outage above was "let's just have one VLAN where everything
-can talk to everything" — understandable, but the wrong fix: it would undo the entire
-point of this build (tenant isolation, PCI/compliance separation). The actual problem
-wasn't the VLAN topology, it was that an **unused port defaulted to something that
-blocked a switch's own management traffic** the moment it became an uplink.
-
-Two new profiles, same shape as the trunks minus the tagged VLANs:
-
-| Profile | Mode | Native VLAN | Tagged |
-|---|---|---|---|
-| `BAR-IDLE-PORT` | Edge | MGMT (1) | Block All |
-| `DISP-IDLE-PORT` | Edge | MGMT (1) | Block All |
-
-Applied to every port that was on `*-POS-PORT` from §4 (i.e. everything except the
-two trunk ports and the TV):
-
-- `restaurant`: ports 2, 4–23 (21 ports) → `BAR-IDLE-PORT`
-- `dispo`: ports 2–23 (22 ports) → `DISP-IDLE-PORT`
-
-Verified via the Native VLAN counts in the controller: `restaurant` reads
-`MGMT (25)` / `BAR-IOT (1)` — zero ports left on `BAR-POS-PORT`. `dispo` reads
-`MGMT (26)` — every single port.
-
-**Effect:** any port that isn't yet assigned a real device now defaults to
-MGMT-reachable, so a cable landing there — as a new uplink, a laptop, anything — gets
-management access immediately instead of silently locking the switch out. It still
-cannot bridge into the other tenant's VLANs (Block All), so the isolation this build
-exists for is unchanged. This directly prevents a repeat of §3b: had these ports
-carried this profile *before* the re-cabling, the outage would not have happened.
-
-**Still a default, not the finished map** — same as §4's caveat. As real drops get
-identified, move that specific port off `*-IDLE-PORT` to `*-POS-PORT` /
-`*-BACK-PORT` / `*-IOT-PORT`.
-
-**Open recommendation:** designate one port per switch (port 1 fits — it's the
-historical working uplink on both) as a permanent, never-reassigned management
-fallback, labeled "do not patch a client device here." Not yet done.
-
-### The picture-display TV — still a stopgap
-
-**`restaurant` port 3 had a client — a picture-display TV — sitting untagged on MGMT**
-before any of this was done. It's now on `BAR-IOT-PORT` (off MGMT), but it's cabled to
-the wrong switch: Jason confirmed it belongs on `dispo`, serving the dispensary, and
-he'll move the physical cable later. **Once moved, assign that port on `dispo` to
-`DISP-BACK-PORT`** — do not add `DISP-BACK` to `BAR-TRUNK` to patch it in early on
-`restaurant`; that punches a hole in the tenant separation for the sake of one
-mis-cabled device.
-
-**Bigger question, raised but not resolved:** `BAR-IOT` (and any future `DISP-IOT`)
-sits inside the `Bar`/`Dispensary` zone, and intra-zone traffic isn't isolated
-(`L3 Network Isolation (ACL)` is off) — so today a bar TV *can* reach the bar POS
-network over VLAN routing within the same zone. The cleaner design is a dedicated
-zone for low-trust signage/display gear per tenant — blocked from every internal zone,
-allowed only to External — not UniFi's built-in `DMZ` zone, which is for something the
-internet needs to reach inbound. Not built; needs Jason's sign-off first.
+Port 2 still has an unidentified device on it (`E100-f63 3f:63`, Comcast vendor OUI,
+on MGMT). Worth asking Jason what it is — a stray device on the management network
+deserves a name.
 
 ## 5. Label the ports in the controller
 
@@ -240,21 +117,47 @@ internet needs to reach inbound. Not built; needs Jason's sign-off first.
 Do this while standing there with the cable in hand. Six months from now "Port 7"
 means nothing and "KDS — kitchen pass" means everything.
 
-## 6. Verify before calling it done
+## 6. The 2026-09-07 outage — how it actually ended
+
+Recorded at the time: both switches went offline when the uplinks moved to port 24,
+because port 24 carried a client-only profile that blocked the switch's own
+management traffic. The recorded fix was a physical cable swap to port 1 and back.
+
+**Nobody ever performed that swap, and the switches came back anyway.** On 2026-09-09
+both showed online with ~1d 18h uptime, uplinked on port 24, `dispo` holding
+`10.0.1.238` on MGMT. So either they were never as offline as the controller's
+device page claimed — that page kept showing "dispo (Offline), last connected Aug 30"
+long after a client on `dispo` port 10 was live and passing traffic — or applying the
+new trunk profiles to gateway ports 7 and 8 was enough on its own, since an
+Infrastructure-mode trunk passes untagged MGMT and that's all a switch needs to phone
+home.
+
+**The lesson worth keeping is not the cable dance.** It's this: before moving an
+uplink to a *different* physical port, set that port's profile to the matching trunk
+**first**, while the switch is still reachable on its current uplink. Doing both in
+one visit is what created the outage. And: don't trust a stale "Offline" label —
+cross-check against whether clients behind that device are passing traffic.
+
+## 7. Verify before calling it done
 
 - [x] Both switches show their alias on the front LCM screen (`restaurant`, `dispo`)
-- [ ] ~~Both reachable, adopted, provisioned green~~ — **both offline as of 2026-09-07,
-      see §3b for the one-minute fix needed on the next site visit**
+- [x] Both reachable, adopted, online — confirmed 2026-09-09, uplinked on port 24
+- [x] No port anywhere is left on the default "All" profile
+- [x] Ports 1–12 on each switch carry that tenant's secure VLAN — confirmed on `dispo`
+      by a live client on port 10 landing on DISP-SECURE
 - [ ] Static/reserved MGMT IPs set on both switches
-- [x] No port anywhere is left on the default "All" profile — confirmed 2026-09-05
-- [ ] A laptop on a `BAR-POS-PORT` gets a **10.0.10.x** address
-- [ ] A laptop on a `DISP-POS-PORT` gets a **10.0.20.x** address
+- [ ] A laptop on `restaurant` port 1–12 gets a **10.0.100.x** address
+- [ ] A laptop on `dispo` port 1–12 gets a **10.0.200.x** address
 - [ ] From the bar-side laptop, **ping the dispensary laptop — it must fail**
 - [ ] Reverse it and ping back — **must also fail**
+- [ ] A laptop on either switch's port 13–23, given a static 10.0.150.x, reaches the
+      internet and **cannot** ping anything on 10.0.100.x / 10.0.200.x / 10.0.1.x
+- [ ] From a laptop on ports 1–12, the controller at 10.0.1.1 **is** reachable
+      (that's the deliberate Secure→Mgmt allow — Jason's "so I can manage it")
 - [ ] Unused ports disabled
 - [ ] LCM screens locked
 - [ ] Back up the site
 
-The two ping tests are the whole build in one check — they need a physical presence
-on site with two test laptops, so they're still open. Do them in **both**
-directions — a one-way block is a misconfiguration that looks like success.
+The ping tests are the whole build in one check, and they need two laptops on site.
+Do them in **both** directions — a one-way block is a misconfiguration that looks
+like success.

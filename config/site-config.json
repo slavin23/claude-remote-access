@@ -1,7 +1,8 @@
 {
-  "$comment": "Source of truth for the bar/dispensary UniFi build. Passphrases are NEVER stored here - each WLAN names an environment variable the provisioning script reads at runtime.",
+  "$comment": "Source of truth for the bar/dispensary UniFi build - REBUILT 2026-09-09 from scratch to a simpler model. Passphrases are NEVER stored here - each WLAN names an environment variable the provisioning script reads at runtime. All four WLANs share one passphrase today (WIFI_FIELDS_PSK); the value lives out-of-band.",
   "site": "default",
   "gateway": "Dream Machine Pro",
+  "design_note": "Two secure tenant networks (one per business), one wired open-to-internet network, one shared wifi where devices can talk to each other, one staff wifi that is client-isolated and internet-only. VLAN ID == third octet of the subnet so nothing needs a lookup table. Fresh IDs (100+) were chosen so the new networks could be built alongside the old ones and the old ones torn down last.",
 
   "networks": [
     {
@@ -12,147 +13,179 @@
       "dhcp": { "start": "10.0.1.50", "stop": "10.0.1.200", "lease": 86400 },
       "zone": "Mgmt",
       "existing": true,
-      "note": "Default LAN. Re-address the existing network by hand rather than creating a duplicate."
+      "note": "Default LAN. Controller, switches, APs, PDU, 5G backup. Untouched by the rebuild."
     },
     {
-      "name": "BAR-POS",
-      "vlan": 10,
-      "subnet": "10.0.10.1/24",
+      "name": "BAR-SECURE",
+      "vlan": 100,
+      "subnet": "10.0.100.1/24",
       "purpose": "corporate",
-      "dhcp": { "start": "10.0.10.50", "stop": "10.0.10.200", "lease": 86400 },
-      "zone": "Bar",
-      "note": "POS terminals, KDS, card readers, receipt printers"
+      "dhcp": { "start": "10.0.100.50", "stop": "10.0.100.200", "lease": 86400 },
+      "zone": "Bar-Secure",
+      "wired": "restaurant switch ports 1-12",
+      "wifi": "BAR-SECURE-WIFI (hidden)",
+      "note": "The bar's one private network - POS, back office, everything. Replaces BAR-POS/BAR-BACK/BAR-IOT."
     },
     {
-      "name": "BAR-BACK",
-      "vlan": 11,
-      "subnet": "10.0.11.1/24",
+      "name": "DISP-SECURE",
+      "vlan": 200,
+      "subnet": "10.0.200.1/24",
       "purpose": "corporate",
-      "dhcp": { "start": "10.0.11.50", "stop": "10.0.11.200", "lease": 86400 },
-      "zone": "Bar",
-      "note": "Back-office PC, office printer, scheduling"
+      "dhcp": { "start": "10.0.200.50", "stop": "10.0.200.200", "lease": 86400 },
+      "zone": "Disp-Secure",
+      "wired": "dispo switch ports 1-12",
+      "wifi": "DISP-SECURE-WIFI (hidden)",
+      "note": "The dispensary's one private network - POS, seed-to-sale, back office. Replaces DISP-POS/DISP-BACK."
     },
     {
-      "name": "BAR-IOT",
-      "vlan": 12,
-      "subnet": "10.0.12.1/24",
+      "name": "OPEN-NET",
+      "vlan": 150,
+      "subnet": "10.0.150.1/24",
       "purpose": "corporate",
-      "dhcp": { "start": "10.0.12.50", "stop": "10.0.12.200", "lease": 86400 },
-      "zone": "Bar",
-      "note": "TVs, digital menu boards, cooler sensors, music"
+      "dhcp": null,
+      "zone": "Open",
+      "wired": "both switches ports 13-23",
+      "wifi": null,
+      "note": "Internet-only, wired only, no DHCP server - Jason assigns static addresses by hand (he has a static plan). Fully isolated from every internal network. 'corporate' purpose with explicit block policies rather than the 'guest' purpose, so the isolation is written down in the firewall and not implied by a network type."
     },
     {
-      "name": "DISP-POS",
-      "vlan": 20,
-      "subnet": "10.0.20.1/24",
+      "name": "SHARED-SECURE",
+      "vlan": 160,
+      "subnet": "10.0.160.1/24",
       "purpose": "corporate",
-      "dhcp": { "start": "10.0.20.50", "stop": "10.0.20.200", "lease": 86400 },
-      "zone": "Dispensary",
-      "note": "POS + seed-to-sale, ID scanners"
-    },
-    {
-      "name": "DISP-BACK",
-      "vlan": 21,
-      "subnet": "10.0.21.1/24",
-      "purpose": "corporate",
-      "dhcp": { "start": "10.0.21.50", "stop": "10.0.21.200", "lease": 86400 },
-      "zone": "Dispensary",
-      "note": "Back office, vault-room PC"
-    },
-    {
-      "name": "GUEST",
-      "vlan": 30,
-      "subnet": "10.0.30.1/23",
-      "purpose": "guest",
-      "dhcp": { "start": "10.0.30.10", "stop": "10.0.31.250", "lease": 14400 },
-      "zone": "Guest",
-      "note": "/23 spans 10.0.30.0-10.0.31.255 (510 usable). A /22 anchored at .30 is not a valid boundary - it normalises to 10.0.28.0/22 and the DHCP range is rejected. Short lease so a busy Friday recycles addresses."
+      "dhcp": { "start": "10.0.160.50", "stop": "10.0.160.200", "lease": 86400 },
+      "zone": "Shared",
+      "wired": null,
+      "wifi": "SHARED-SECURE-WIFI (visible)",
+      "client_isolation": false,
+      "note": "Shared by both tenants. Devices on it CAN talk to each other - that is its purpose. Wifi only; every switch port is already spoken for."
     },
     {
       "name": "STAFF",
-      "vlan": 31,
-      "subnet": "10.0.40.1/24",
+      "vlan": 170,
+      "subnet": "10.0.170.1/24",
       "purpose": "corporate",
-      "dhcp": { "start": "10.0.40.50", "stop": "10.0.40.200", "lease": 86400 },
+      "dhcp": { "start": "10.0.170.50", "stop": "10.0.170.200", "lease": 14400 },
       "zone": "Staff",
-      "note": "10.0.40.x, NOT 10.0.31.x - the guest /23 (10.0.30.0-10.0.31.255) swallows 10.0.31.0/24. Fallback network if RADIUS dynamic VLAN is not used."
+      "wired": null,
+      "wifi": "STAFF-WIFI (visible)",
+      "client_isolation": true,
+      "note": "Staff personal devices. Client-isolated - devices cannot see each other - and internet-only. Short lease; phones come and go. Distinct from SHARED-SECURE, which is the opposite (devices talk)."
     }
   ],
 
   "wlans": [
     {
-      "name": "Fields Guest",
-      "network": "GUEST",
-      "security": "open",
+      "name": "BAR-SECURE-WIFI",
+      "network": "BAR-SECURE",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_FIELDS_PSK",
+      "bands": ["2g", "5g"],
+      "hide_ssid": true,
+      "ap_group": "all",
+      "client_isolation": false,
+      "note": "Wireless leg of the bar's private network. Hidden - it is a private business network. Scope to a 'bar' AP group once one exists; broadcasting on all 5 APs until then."
+    },
+    {
+      "name": "DISP-SECURE-WIFI",
+      "network": "DISP-SECURE",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_FIELDS_PSK",
+      "bands": ["2g", "5g"],
+      "hide_ssid": true,
+      "ap_group": "all",
+      "client_isolation": false,
+      "note": "Wireless leg of the dispensary's private network. Hidden. Scope to a 'dispensary' AP group once one exists."
+    },
+    {
+      "name": "SHARED-SECURE-WIFI",
+      "network": "SHARED-SECURE",
+      "security": "wpapsk",
+      "wpa_mode": "wpa2",
+      "passphrase_env": "WIFI_FIELDS_PSK",
       "bands": ["2g", "5g"],
       "hide_ssid": false,
       "ap_group": "all",
-      "note": "Pair with a captive portal in Settings > Hotspot. Rename to the venue's actual name before applying."
+      "client_isolation": false,
+      "note": "Visible. Devices on it talk to each other."
     },
     {
-      "name": "Venue Staff",
+      "name": "STAFF-WIFI",
       "network": "STAFF",
       "security": "wpapsk",
       "wpa_mode": "wpa2",
-      "passphrase_env": "WIFI_STAFF_PSK",
-      "bands": ["5g", "6g"],
+      "passphrase_env": "WIFI_FIELDS_PSK",
+      "bands": ["2g", "5g"],
       "hide_ssid": false,
       "ap_group": "all",
-      "note": "PSK fallback only. The design calls for WPA-Enterprise with dynamic VLAN - build that in the UI, see docs section 5."
-    },
-    {
-      "name": "BAR-POS",
-      "network": "BAR-POS",
-      "security": "wpapsk",
-      "wpa_mode": "wpa2",
-      "passphrase_env": "WIFI_BARPOS_PSK",
-      "bands": ["5g"],
-      "hide_ssid": true,
-      "ap_group": "bar",
-      "note": "Handhelds and tablets only. Wire fixed terminals."
-    },
-    {
-      "name": "DISP-POS",
-      "network": "DISP-POS",
-      "security": "wpapsk",
-      "wpa_mode": "wpa2",
-      "passphrase_env": "WIFI_DISPPOS_PSK",
-      "bands": ["5g"],
-      "hide_ssid": true,
-      "ap_group": "dispensary",
-      "note": "Handhelds and tablets only. Wire fixed terminals."
+      "client_isolation": true,
+      "note": "Visible. Client isolation ON at the SSID - this is the setting that makes 'isolated per device' real. Internet only."
     }
   ],
 
+  "port_profiles": [
+    { "name": "BAR-SECURE-TRUNK",  "mode": "infrastructure", "native": "MGMT",        "tagged": ["BAR-SECURE", "OPEN-NET"],  "applied": "gateway port 7 + restaurant port 24" },
+    { "name": "DISP-SECURE-TRUNK", "mode": "infrastructure", "native": "MGMT",        "tagged": ["DISP-SECURE", "OPEN-NET"], "applied": "gateway port 8 + dispo port 24" },
+    { "name": "BAR-SECURE-PORT",   "mode": "edge",           "native": "BAR-SECURE",  "tagged": [],                          "applied": "restaurant ports 1-12" },
+    { "name": "DISP-SECURE-PORT",  "mode": "edge",           "native": "DISP-SECURE", "tagged": [],                          "applied": "dispo ports 1-12" },
+    { "name": "OPEN-PORT",         "mode": "edge",           "native": "OPEN-NET",    "tagged": [],                          "applied": "both switches ports 13-23" }
+  ],
+
   "firewall_zones": {
-    "Mgmt": ["MGMT"],
-    "Bar": ["BAR-POS", "BAR-BACK", "BAR-IOT"],
-    "Dispensary": ["DISP-POS", "DISP-BACK"],
-    "Guest": ["GUEST"],
-    "Staff": ["STAFF"]
+    "Mgmt":        ["MGMT"],
+    "Bar-Secure":  ["BAR-SECURE"],
+    "Disp-Secure": ["DISP-SECURE"],
+    "Open":        ["OPEN-NET"],
+    "Shared":      ["SHARED-SECURE"],
+    "Staff":       ["STAFF"]
   },
 
   "firewall_policies": [
-    { "from": "Bar",           "to": "Dispensary",  "action": "block", "why": "The entire point of the build" },
-    { "from": "Dispensary",    "to": "Bar",         "action": "block", "why": "Both directions, written explicitly" },
-    { "from": "Guest",         "to": "*internal*",  "action": "block", "why": "Plus client isolation on the SSID itself" },
-    { "from": "Guest",         "to": "External",    "action": "allow", "why": "Rate-limited via traffic rules" },
-    { "from": "Staff",         "to": "Bar",         "action": "block", "why": "Staff phones never touch card networks" },
-    { "from": "Staff",         "to": "Dispensary",  "action": "block", "why": "Same" },
-    { "from": "Staff",         "to": "External",    "action": "allow", "why": "" },
-    { "from": "Guest",         "to": "Mgmt",        "action": "block", "why": "No exceptions" },
-    { "from": "Staff",         "to": "Mgmt",        "action": "block", "why": "No exceptions" },
-    { "from": "Bar",           "to": "Mgmt",        "action": "block", "why": "Admin reaches Mgmt from a jump host only" },
-    { "from": "Dispensary",    "to": "Mgmt",        "action": "block", "why": "Same" }
+    { "from": "Bar-Secure",  "to": "Disp-Secure", "action": "block", "why": "The one rule that never changes" },
+    { "from": "Disp-Secure", "to": "Bar-Secure",  "action": "block", "why": "Both directions, written explicitly" },
+    { "from": "Bar-Secure",  "to": "Mgmt",        "action": "allow", "why": "A laptop on the bar's secure ports can reach the controller - Jason's 'so I can access to manage it'" },
+    { "from": "Disp-Secure", "to": "Mgmt",        "action": "allow", "why": "Same, dispensary side" },
+    { "from": "Bar-Secure",  "to": "External",    "action": "allow", "why": "" },
+    { "from": "Disp-Secure", "to": "External",    "action": "allow", "why": "" },
+    { "from": "Open",        "to": "Mgmt",        "action": "block", "why": "Open network manages nothing" },
+    { "from": "Open",        "to": "Bar-Secure",  "action": "block", "why": "Fully isolated - Jason's explicit choice" },
+    { "from": "Open",        "to": "Disp-Secure", "action": "block", "why": "" },
+    { "from": "Open",        "to": "Shared",      "action": "block", "why": "" },
+    { "from": "Open",        "to": "Staff",       "action": "block", "why": "" },
+    { "from": "Open",        "to": "External",    "action": "allow", "why": "The whole point of it" },
+    { "from": "Shared",      "to": "Mgmt",        "action": "block", "why": "" },
+    { "from": "Shared",      "to": "Bar-Secure",  "action": "block", "why": "Shared devices talk to each other, not into either tenant's private network" },
+    { "from": "Shared",      "to": "Disp-Secure", "action": "block", "why": "" },
+    { "from": "Shared",      "to": "Open",        "action": "block", "why": "" },
+    { "from": "Shared",      "to": "Staff",       "action": "block", "why": "" },
+    { "from": "Shared",      "to": "External",    "action": "allow", "why": "" },
+    { "from": "Staff",       "to": "Mgmt",        "action": "block", "why": "" },
+    { "from": "Staff",       "to": "Bar-Secure",  "action": "block", "why": "" },
+    { "from": "Staff",       "to": "Disp-Secure", "action": "block", "why": "" },
+    { "from": "Staff",       "to": "Open",        "action": "block", "why": "" },
+    { "from": "Staff",       "to": "Shared",      "action": "block", "why": "" },
+    { "from": "Staff",       "to": "External",    "action": "allow", "why": "Internet only" }
   ],
 
+  "wan": {
+    "interface": "WAN1 (gateway port 9, Frontier)",
+    "mode": "static",
+    "address": "65.73.117.54/30",
+    "gateway": "65.73.117.53",
+    "dns": ["74.40.74.40", "74.40.74.41"],
+    "failover": "WAN3 UniFi 5G backup, already configured, Online",
+    "note": "Applied 2026-09-09, came up first try. No static-then-DHCP auto-fallback exists on a single WAN; manual fallback is Settings > Internet > Internet 1 > IPv4 > DHCP."
+  },
+
   "manual_steps": [
-    "Zone-based firewall: create the zones above, then the policies, default-deny between zones first",
-    "RADIUS + dynamic VLAN for the staff SSID (bar accounts -> VLAN 11, dispensary -> VLAN 21)",
-    "AP Groups 'bar' (3 APs) and 'dispensary' (2 APs) before applying the POS WLANs",
-    "DHCP guard with trusted server addresses on every network",
-    "5G Backup failover scoping - POS allowed, guest excluded, alert under 10 GB",
-    "RF tuning pass: 5 GHz at 40 MHz, min RSSI -72, low data rates disabled, TX power medium",
-    "Per-zone bandwidth limits on the primary WAN"
+    "Zone-based firewall: create the six zones, then the policies above - explicit block between every pair that should not talk, do not rely on defaults",
+    "Client Device Isolation ON for STAFF-WIFI, OFF for SHARED-SECURE-WIFI - check it, the UI default varies",
+    "OPEN-NET: DHCP server OFF. Devices get static addresses from Jason's plan",
+    "AP Groups 'bar' and 'dispensary' - then scope BAR-SECURE-WIFI / DISP-SECURE-WIFI to them",
+    "DHCP guard with trusted server addresses on every network that has a DHCP server",
+    "5G Backup failover scoping - secure networks allowed, OPEN-NET and STAFF excluded, alert under 10 GB",
+    "RF tuning pass: 5 GHz at 40 MHz, min RSSI -72, low data rates disabled, TX power medium"
   ]
 }

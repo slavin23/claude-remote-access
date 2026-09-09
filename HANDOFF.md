@@ -276,6 +276,71 @@ still-offline switches** — the config changes queue exactly like the port 24 f
 above, and will apply the moment each switch phones home per the recovery steps.
 No additional physical work was created by doing this now.
 
+## Completed 2026-09-09 — WAN1 moved to a static public IP
+
+Jason supplied the ISP's static block. WAN1 (`Internet 1`, Frontier, gateway port 9)
+was on DHCP behind a private `192.168.254.42` — i.e. NAT'd behind the ISP's box. Now:
+
+| Field | Value |
+|---|---|
+| IPv4 Connection | Static |
+| IPv4 Address | `65.73.117.54` |
+| Netmask | `/30` (`255.255.255.252`) |
+| Gateway | `65.73.117.53` |
+| DNS | `74.40.74.40`, `74.40.74.41` (Auto DNS off) |
+
+**Attempt 1 (`.54/30`, gw `.53`) FAILED.** It looked fine for about a minute — the
+Internet table showed Online, 100%, 22 ms, and I wrote it up as a success. Then the
+gateway's WAN health checks failed and it tripped **WAN Failover** onto the 5G
+backup. The link was up; nothing was routing through it. Don't trust the first
+Online reading on a WAN change — wait for the failover banner on the dashboard to
+stay clear, and check the ISP row's dot is green, not red.
+
+**Why it failed — the likely mechanism:** before any of this, WAN1 was getting
+`192.168.254.42` by DHCP. That's a private address, which means the Frontier modem
+is in **router/NAT mode**, and `.54/30` with gateway `.53` reads like the modem's own
+upstream point-to-point link — the ISP's transport addressing, not a customer-usable
+block. The UDM can't ARP `65.73.117.53` on a link whose other end is `192.168.254.1`.
+
+**Attempt 2 (`65.73.117.49/24`, gw `65.73.117.1`, same DNS) — never got applied.**
+Jason's second set looks like an actual routed assignment (a `/24`-scoped address
+with the ISP edge router at `.1`) and is the right thing to try next. But the
+UniFi Internet panel fought it: the Netmask picker *displayed* `24` after being
+clicked yet its underlying state stayed `30`, so the gateway kept failing the
+"must be inside the same range" check and Apply silently refused. A focus/Tab to
+re-run validation then scrambled other fields — the DNS boxes came back reading
+`65.73.117.1` / `1.1.1.1`. At that point Jason called it: **revert to DHCP, finish
+the build, come back to the static later.** Discarded unsaved; nothing from
+attempt 2 ever reached the gateway.
+
+**Current state: WAN1 reverted to DHCP + Auto DNS** — the exact config that was
+working before any of this. Site is back off the 5G backup once the health checks
+clear.
+
+**Before trying the static again, two things to settle — neither is a UDM setting:**
+
+1. **Ask Frontier which mode the modem is in.** The DHCP address the UDM gets is
+   `192.168.254.x`, i.e. the modem is routing/NAT-ing. A public static on the UDM's
+   WAN only works if the modem is in bridge / IP-passthrough mode, *or* if Frontier
+   has the static block routed to the modem's LAN side with `.1` as the modem's LAN
+   address — in which case `.49/24` gw `.1` is exactly right. Get that answer first.
+2. **Set the netmask by typing, not picking.** The picker is unreliable under
+   automation. If doing it by hand in the real UI it's fine; if scripting it, type
+   `24` into the combobox and press Enter, and re-blur the gateway field, and
+   confirm the Apply/Cancel footer *disappears* before closing the panel — the
+   "Unsaved changes" dialog on close is the tell that nothing saved.
+
+**On "DHCP as a backup":** UniFi has no try-static-then-fall-back-to-DHCP mode on a
+single WAN — it's one connection type per interface. The "backup" is a manual
+revert: `Settings → Internet → Internet 1 → IPv4 → DHCP`. Real failover if WAN1
+dies entirely is the 5G backup (`WAN3`, Second Failover) — which is exactly what
+carried the site through attempt 1's failure. **It has a 10 GB monthly cap**, so a
+failed static attempt isn't free: revert fast rather than leaving it to "settle".
+
+Note: the gateway's Advanced toggle had to be flipped from **Auto → Manual** before
+the IPv4 connection-type radios would accept a click — they're rendered but inert
+on Auto. Easy to burn ten minutes on.
+
 ## The setup wizard — already done, nothing to do here
 
 Earlier drafts of this handoff opened with the four wizard decisions (advanced setup,

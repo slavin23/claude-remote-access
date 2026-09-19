@@ -23,6 +23,7 @@ Current shape, in one table:
 | **Networks** | MGMT (1), BAR-SECURE (100), DISP-SECURE (200), OPEN-NET (150), SHARED-SECURE (160), STAFF (170) |
 | **Wi-Fi** | BAR-SECURE-WIFI (hidden), DISP-SECURE-WIFI, SHARED-SECURE-WIFI, STAFF-WIFI (client-isolated) |
 | **Switch ports** | 1–12 = that tenant's secure VLAN · 13–23 = OPEN-NET · 24 = trunk uplink |
+| **Gateway LAN** | 3–4 = SHARED-SECURE (WiiMs) · 7–8 = switch trunks · 5–6 = Flex/PDU · 1–2 spare |
 | **Firewall** | 6 zones, block-by-default between all of them, internet allowed, plus Secure→Mgmt |
 | **WAN** | DHCP behind the Frontier modem. Static attempted twice, reverted — see 2026-09-09 WAN section |
 
@@ -106,7 +107,7 @@ VLAN 100 — so there's no lookup table to remember.
 | `BAR-SECURE` | 100 | 10.0.100.0/24 | yes | the bar's one private network |
 | `DISP-SECURE` | 200 | 10.0.200.0/24 | yes | the dispensary's one private network |
 | `OPEN-NET` | 150 | 10.0.150.0/24 | yes | internet-only, wired. ATMs live here |
-| `SHARED-SECURE` | 160 | 10.0.160.0/24 | yes | shared by both tenants, devices talk to each other |
+| `SHARED-SECURE` | 160 | 10.0.160.0/24 | yes | shared by both tenants, devices talk to each other. Wi-Fi + gateway ports 3–4 (WiiMs) |
 | `STAFF` | 170 | 10.0.170.0/24 | yes | staff phones, client-isolated at the SSID |
 
 ### Switch ports — same map on both switches

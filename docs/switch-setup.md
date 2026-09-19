@@ -46,9 +46,9 @@ Both names show on their front LCM screens already. No rename needed.
 - **LCM lock.** Both sit in public-facing spaces. The touchscreen can factory-reset
   the switch from the front panel. Lock it before handover.
 
-## 2. Port profiles — the five that exist
+## 2. Port profiles — the six that exist
 
-`Settings → Networks → Port Profiles`. These five are the complete set:
+`Settings → Networks → Port Profiles`. These six are the complete set:
 
 | Profile | Mode | Native VLAN | Tagged VLANs | Used on |
 |---|---|---|---|---|
@@ -57,9 +57,11 @@ Both names show on their front LCM screens already. No rename needed.
 | `BAR-SECURE-PORT` | Edge | BAR-SECURE (100) | Block All | `restaurant` ports 1–12 |
 | `DISP-SECURE-PORT` | Edge | DISP-SECURE (200) | Block All | `dispo` ports 1–12 |
 | `OPEN-PORT` | Edge | OPEN-NET (150) | Block All | both switches, ports 13–23 |
+| `SHARED-SECURE-PORT` | Edge | SHARED-SECURE (160) | Block All | gateway ports 3–4 (see §4) |
 
-Neither trunk carries SHARED-SECURE or STAFF — those are wireless-only VLANs, and
-the APs home-run to the Flex, not to these switches.
+Neither trunk carries SHARED-SECURE or STAFF, and neither switch has a port on
+either — the APs home-run to the Flex, and SHARED-SECURE's two wired drops are on
+the gateway itself, not out here.
 
 **Note the trunks are asymmetric on purpose.** `BAR-SECURE-TRUNK` carries VLAN 100
 but not 200; `DISP-SECURE-TRUNK` carries 200 but not 100. Each tenant's secure VLAN
@@ -123,13 +125,40 @@ it predates the fix; renew its lease.
 
 ## 4. Gateway ports
 
-| Gateway port | Goes to | Profile |
-|---|---|---|
-| Port 5 | Flex 2.5G PoE | default (untouched) |
-| Port 6 | USP PDU Pro | default (untouched) |
-| Port 7 | `restaurant` port 24 | `BAR-SECURE-TRUNK` |
-| Port 8 | `dispo` port 24 | `DISP-SECURE-TRUNK` |
-| Port 9 | Frontier WAN | — |
+| Gateway port | Label | Goes to | Profile |
+|---|---|---|---|
+| Port 1 | — | spare | none (MGMT native, Block All) |
+| Port 2 | — | `E100-f63 3f:63` | none (MGMT native, Block All) |
+| Port 3 | `WiiM 1` | WiiM audio streamer | `SHARED-SECURE-PORT` |
+| Port 4 | `WiiM 2` | WiiM audio streamer | `SHARED-SECURE-PORT` |
+| Port 5 | — | Flex 2.5G PoE | default (untouched) |
+| Port 6 | — | USP PDU Pro | default (untouched) |
+| Port 7 | — | `restaurant` port 24 | `BAR-SECURE-TRUNK` |
+| Port 8 | — | `dispo` port 24 | `DISP-SECURE-TRUNK` |
+| Port 9 | — | Frontier WAN | — |
+
+### Ports 3 and 4 — the WiiMs, added 2026-09-19
+
+Both switches' ports were already fully allocated (1–12 tenant, 13–23 open, 24 trunk),
+so the two wired drops for the WiiM streamers went straight onto the gateway. A sixth
+port profile was created for them:
+
+| Profile | Mode | Native VLAN | Tagged |
+|---|---|---|---|
+| `SHARED-SECURE-PORT` | Edge | SHARED-SECURE (160) | Block All |
+
+SHARED-SECURE is the right home: the streamers need to be reachable from phones and
+tablets, and that network exists precisely so devices on it can see each other.
+
+**Both ports were on the factory default before this** — MGMT untagged with **Tagged
+VLAN Management = Allow All**, the widest setting there is. A WiiM sitting there was
+on the management network with access to every tagged VLAN, the same exposure as the
+Samsung TV found on `restaurant` port 3 back in September. Worth checking any port
+you have not explicitly profiled: `Allow All` is what UniFi ships, not something
+anyone chose.
+
+Verified after applying: the gateway's Native VLAN counts read `MGMT (7)` /
+`SHARED-SECURE (2)`.
 
 **Ports 1 and 2 were reset on 2026-09-09.** They carried the old `BAR-TRUNK` /
 `DISP-TRUNK` profiles from when the switches uplinked there. Both are now: profile

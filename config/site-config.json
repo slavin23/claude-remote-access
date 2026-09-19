@@ -55,10 +55,10 @@
       "purpose": "corporate",
       "dhcp": { "start": "10.0.160.50", "stop": "10.0.160.200", "lease": 86400 },
       "zone": "Shared",
-      "wired": null,
+      "wired": "gateway LAN ports 3 and 4 (WiiM 1, WiiM 2)",
       "wifi": "SHARED-SECURE-WIFI (visible)",
       "client_isolation": false,
-      "note": "Shared by both tenants. Devices on it CAN talk to each other - that is its purpose. Wifi only; every switch port is already spoken for."
+      "note": "Shared by both tenants. Devices on it CAN talk to each other - that is its purpose. Wireless plus two wired drops on the gateway itself, added 2026-09-19 for the WiiM audio streamers: they need to be reachable by phones and tablets, which is exactly this network's job. Both switches' ports were already fully allocated, hence going direct to the gateway."
     },
     {
       "name": "STAFF",
@@ -130,7 +130,8 @@
     { "name": "DISP-SECURE-TRUNK", "mode": "infrastructure", "native": "MGMT",        "tagged": ["DISP-SECURE", "OPEN-NET"], "applied": "gateway port 8 + dispo port 24" },
     { "name": "BAR-SECURE-PORT",   "mode": "edge",           "native": "BAR-SECURE",  "tagged": [],                          "applied": "restaurant ports 1-12" },
     { "name": "DISP-SECURE-PORT",  "mode": "edge",           "native": "DISP-SECURE", "tagged": [],                          "applied": "dispo ports 1-12" },
-    { "name": "OPEN-PORT",         "mode": "edge",           "native": "OPEN-NET",    "tagged": [],                          "applied": "both switches ports 13-23" }
+    { "name": "OPEN-PORT",         "mode": "edge",           "native": "OPEN-NET",    "tagged": [],                          "applied": "both switches ports 13-23" },
+    { "name": "SHARED-SECURE-PORT","mode": "edge",           "native": "SHARED-SECURE","tagged": [],                         "applied": "gateway ports 3-4 (WiiM streamers), added 2026-09-19" }
   ],
 
   "firewall_zones": {

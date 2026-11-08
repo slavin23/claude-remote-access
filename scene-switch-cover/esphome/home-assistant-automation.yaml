@@ -1,0 +1,18 @@
+# Paste into Settings > Automations > (new) > Edit in YAML
+alias: Living room scene switch
+mode: single
+triggers:
+  - trigger: event
+    event_type: esphome.scene_switch
+    event_data:
+      device: scene-switch-living-room
+actions:
+  - choose:
+      - conditions: "{{ trigger.event.data.button == 'top' }}"
+        sequence:
+          - action: scene.turn_on
+            target: { entity_id: scene.living_room_bright }   # <- your "on" scene
+      - conditions: "{{ trigger.event.data.button == 'bottom' }}"
+        sequence:
+          - action: light.turn_off
+            target: { area_id: living_room }                  # <- or a "night" scene

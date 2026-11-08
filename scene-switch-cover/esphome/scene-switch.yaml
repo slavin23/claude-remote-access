@@ -1,0 +1,90 @@
+# ESPHome config for the Scene Switch Cover (battery version)
+# Board: Seeed XIAO ESP32-C6  |  Top button -> D1 (GPIO1)  |  Bottom button -> D2 (GPIO2)
+# Each button: one leg to the GPIO pin, the other leg to GND.
+#
+# The ESP32 sleeps (~15 uA) until a button is pressed, wakes, tells Home
+# Assistant which button it was, then goes back to sleep.
+# On first power-up (no button press) it stays awake 5 minutes so you can
+# flash updates over Wi-Fi.
+
+substitutions:
+  name: scene-switch-living-room
+
+esphome:
+  name: ${name}
+  on_boot:
+    - priority: 900
+      then:
+        - lambda: |-
+            uint64_t st = esp_sleep_get_ext1_wakeup_status();
+            if (st & (1ULL << 1)) id(pressed) = 1;        // top
+            else if (st & (1ULL << 2)) id(pressed) = 2;   // bottom
+            else id(pressed) = 0;                         // power-on / reset
+    - priority: -100
+      then:
+        - wait_until:
+            condition: api.connected
+            timeout: 10s
+        - if:
+            condition:
+              lambda: 'return id(pressed) == 1;'
+            then:
+              - homeassistant.event:
+                  event: esphome.scene_switch
+                  data: { device: "${name}", button: top }
+        - if:
+            condition:
+              lambda: 'return id(pressed) == 2;'
+            then:
+              - homeassistant.event:
+                  event: esphome.scene_switch
+                  data: { device: "${name}", button: bottom }
+        - if:
+            condition:
+              lambda: 'return id(pressed) != 0;'
+            then:
+              - delay: 300ms
+              - deep_sleep.enter: sleeper
+            else:
+              - delay: 5min        # OTA window after first power-up
+              - deep_sleep.enter: sleeper
+
+esp32:
+  board: seeed_xiao_esp32c6
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+globals:
+  - id: pressed
+    type: int
+    initial_value: '0'
+
+logger:
+api:
+  encryption:
+    key: !secret api_key
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  power_save_mode: none
+  # A static IP shaves ~0.5 s off each press. Fill in to match your network.
+  # manual_ip:
+  #   static_ip: 192.168.1.60
+  #   gateway: 192.168.1.1
+  #   subnet: 255.255.255.0
+
+deep_sleep:
+  id: sleeper
+  esp32_ext1_wakeup:
+    pins:
+      - number: GPIO1
+        mode: { input: true, pullup: true }
+      - number: GPIO2
+        mode: { input: true, pullup: true }
+    mode: ANY_LOW

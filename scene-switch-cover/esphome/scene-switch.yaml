@@ -1,9 +1,18 @@
 # ESPHome config for the Scene Switch Cover (battery version)
-# Board: Seeed XIAO ESP32-C6  |  Top button -> D1 (GPIO1)  |  Bottom button -> D2 (GPIO2)
-# Each button: one leg to the GPIO pin, the other leg to GND.
+# Board: Seeed XIAO ESP32-C6
 #
-# The ESP32 sleeps (~15 uA) until a button is pressed, wakes, tells Home
-# Assistant which button it was, then goes back to sleep.
+# Wiring
+#   Top button     -> D1 (GPIO1) and GND
+#   Bottom button  -> D2 (GPIO2) and GND
+#   Battery        -> BAT+ / BAT- pads under the XIAO
+#   Battery sense  -> BAT+ --[470k]--+--[470k]-- GND
+#                                    |
+#                                    +-- D0 (GPIO0), plus 100nF from D0 to GND
+#
+# The ESP32 sleeps (~15 uA) until a button is pressed, wakes, sends the
+# button and battery level to Home Assistant, then sleeps again. It also
+# wakes on its own every 12 hours to report the battery, so you still get
+# readings if nobody touches the switch.
 # On first power-up (no button press) it stays awake 5 minutes so you can
 # flash updates over Wi-Fi.
 
@@ -19,7 +28,12 @@ esphome:
             uint64_t st = esp_sleep_get_ext1_wakeup_status();
             if (st & (1ULL << 1)) id(pressed) = 1;        // top
             else if (st & (1ULL << 2)) id(pressed) = 2;   // bottom
-            else id(pressed) = 0;                         // power-on / reset
+            else id(pressed) = 0;                         // timer / power-on
+            id(timer_wake) = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
+    # Read the battery before Wi-Fi starts (Wi-Fi load makes the reading sag)
+    - priority: 300
+      then:
+        - component.update: battery_voltage
     - priority: -100
       then:
         - wait_until:
@@ -39,11 +53,12 @@ esphome:
               - homeassistant.event:
                   event: esphome.scene_switch
                   data: { device: "${name}", button: bottom }
+        # Give the battery sensors a moment to reach Home Assistant
+        - delay: 500ms
         - if:
             condition:
-              lambda: 'return id(pressed) != 0;'
+              lambda: 'return id(pressed) != 0 || id(timer_wake);'
             then:
-              - delay: 300ms
               - deep_sleep.enter: sleeper
             else:
               - delay: 5min        # OTA window after first power-up
@@ -59,28 +74,70 @@ globals:
   - id: pressed
     type: int
     initial_value: '0'
+  - id: timer_wake
+    type: bool
+    initial_value: 'false'
 
 logger:
 api:
   encryption:
     key: !secret api_key
 ota:
-  - platform: esphome
-    password: !secret ota_password
+  - platform: esphome      # uses the api encryption key above
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   fast_connect: true
   power_save_mode: none
-  # A static IP shaves ~0.5 s off each press. Fill in to match your network.
+  # A static IP shaves ~0.5 s off each press and saves battery. Fill in for your network.
   # manual_ip:
   #   static_ip: 192.168.1.60
   #   gateway: 192.168.1.1
   #   subnet: 255.255.255.0
 
+sensor:
+  - platform: adc
+    id: battery_voltage
+    name: "Battery voltage"
+    pin: GPIO0
+    attenuation: 12db
+    samples: 16
+    update_interval: never        # read once per wake (see on_boot)
+    accuracy_decimals: 2
+    unit_of_measurement: V
+    device_class: voltage
+    entity_category: diagnostic
+    filters:
+      - multiply: 2.0             # undo the 470k/470k divider
+    on_value:
+      - component.update: battery_level
+
+  - platform: template
+    id: battery_level
+    name: "Battery"
+    unit_of_measurement: "%"
+    device_class: battery
+    accuracy_decimals: 0
+    update_interval: never
+    # LiPo discharge curve (resting voltage -> percent)
+    lambda: |-
+      const float v = id(battery_voltage).state;
+      const float pts[][2] = {{4.20,100},{4.10,90},{4.00,80},{3.90,65},{3.80,50},
+                              {3.75,40},{3.70,30},{3.65,20},{3.55,10},{3.40,3},{3.30,0}};
+      if (isnan(v)) return NAN;
+      if (v >= pts[0][0]) return 100;
+      for (int i = 1; i < 11; i++) {
+        if (v >= pts[i][0]) {
+          float t = (v - pts[i][0]) / (pts[i-1][0] - pts[i][0]);
+          return pts[i][1] + t * (pts[i-1][1] - pts[i][1]);
+        }
+      }
+      return 0;
+
 deep_sleep:
   id: sleeper
+  sleep_duration: 12h             # wake twice a day to report the battery
   esp32_ext1_wakeup:
     pins:
       - number: GPIO1

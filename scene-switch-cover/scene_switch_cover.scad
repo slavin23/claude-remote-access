@@ -38,9 +38,11 @@ toggle_keeper  = true;     // block under the toggle so it can't be flipped OFF
 // Seeed XIAO ESP32-C6 (21 x 17.5 mm). Also fits XIAO ESP32-C3 / S3.
 esp_w = 18.2;  esp_l = 21.8;
 esp_x = -21;   esp_y = -43;       // board centre on the base
-// LiPo pouch cell, e.g. 602040 (6 x 20 x 40 mm, ~400 mAh)
-batt_w = 21;   batt_l = 41;
-batt_x = -21.5; batt_y = 32.5;
+// LiPo pouch cell 803040 (8 x 30 x 40 mm, 1000 mAh) laid sideways across the
+// top of the plate. Also fits 603040 (~700 mAh) or 103040 (~1200 mAh, 10 mm).
+// The corral is open on the right so the protection board / leads can stick out.
+batt_w = 41;    batt_l = 30.8;     // inner size: X (long side) x Y
+batt_x = -12.1; batt_y = 39.6;
 // 6 x 6 mm tactile switches (4.3 mm tall version)
 tact_body      = 6.3;
 tact_h_total   = 4.3;      // body + plunger; change if yours are 5 or 7 mm
@@ -129,14 +131,12 @@ module base() {
             translate([esp_x - esp_w/2, esp_y + esp_l/2 + 0.2, base_t])
                 cube([esp_w, 1.5, 4.2]);
 
-            // battery corral
+            // battery corral (3 walls, open toward the centre for the leads)
             translate([batt_x, batt_y, base_t])
                 difference() {
                     translate([-batt_w/2 - 1.2, -batt_l/2 - 1.2, 0])
-                        cube([batt_w + 2.4, batt_l + 2.4, 3]);
-                    translate([-batt_w/2, -batt_l/2, -1]) cube([batt_w, batt_l, 5]);
-                    // wire exit
-                    translate([batt_w/2 - 1, -batt_l/2 - 2, -1]) cube([4, 6, 5]);
+                        cube([batt_w + 1.2, batt_l + 2.4, 3]);
+                    translate([-batt_w/2, -batt_l/2, -1]) cube([batt_w + 1, batt_l, 5]);
                 }
 
             // keeper: stops the real toggle being pushed down to OFF
@@ -245,7 +245,7 @@ module dummy_toggle() {
 module dummy_electronics() {
     color("royalblue") translate([esp_x, esp_y, base_t + 2]) cube([17.5, 21, 1.6], center = true);
     color("silver")    translate([esp_x, esp_y - 9.5, base_t + 2 + 2.4]) cube([9, 7.5, 3.2], center = true);
-    color("dimgray")   translate([batt_x, batt_y, base_t + 3]) cube([20, 40, 6], center = true);
+    color("dimgray")   translate([batt_x, batt_y, base_t + 4]) cube([40, 30, 8], center = true);
     for (sy = [-1, 1]) {
         color("black") translate([tact_x, sy*tact_y, pillar_top - pocket_depth + 1.75]) cube([6, 6, 3.5], center = true);
         color("red")   translate([tact_x, sy*tact_y, pillar_top - pocket_depth + 3.5]) cylinder(d = 3.5, h = tact_h_total - 3.5);

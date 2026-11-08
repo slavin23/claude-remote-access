@@ -16,3 +16,20 @@ actions:
         sequence:
           - action: light.turn_off
             target: { area_id: living_room }                  # <- or a "night" scene
+
+---
+# Second automation: warn when the battery gets low
+alias: Scene switch battery low
+mode: single
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.scene_switch_living_room_battery
+    below: 15
+actions:
+  - action: notify.notify            # <- swap for your phone, e.g. notify.mobile_app_iphone
+    data:
+      title: Light switch battery low
+      message: >-
+        The living room scene switch is at
+        {{ states('sensor.scene_switch_living_room_battery') }}%.
+        Plug a USB-C cable into the bottom of the cover to charge it.

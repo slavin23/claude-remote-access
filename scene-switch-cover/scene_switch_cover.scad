@@ -10,7 +10,8 @@
 //    "base"     - flat plate that screws onto the real switch
 //    "shell"    - cover housing that snaps over the base
 //    "rocker"   - the paddle you press
-//    "assembly" - preview only, not for printing
+//    "assembly" - exploded preview, not for printing
+//    "assembled"- on-the-wall preview, not for printing
 //
 //  All dimensions in millimetres. Units stay metric; US plate sizes are
 //  converted from inches.
@@ -266,6 +267,11 @@ else if (part == "cutaway") {
         }
         translate([-100, -100, -50]) cube([100 + tact_x, 200, 100]);
     }
+}
+else if (part == "assembled") {   // as it looks on the wall
+    color("gainsboro") translate([0,0,-1]) cube([260, 260, 2], center = true);   // wall
+    color("white") shell();
+    color("white") rocker();
 }
 else {  // assembly, exploded
     dummy_toggle();
